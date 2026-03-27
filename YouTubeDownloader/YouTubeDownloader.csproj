@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>YouTubeDownloader</AssemblyName>
+    <RootNamespace>YouTubeDownloader</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>YouTubeDownloader</Authors>
+    <Description>A YouTube-themed video downloader</Description>
+
+    <!-- Single file settings -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Embed yt-dlp and ffmpeg as resources -->
+    <EmbeddedResource Include="Tools\yt-dlp.exe" />
+    <EmbeddedResource Include="Tools\ffmpeg.exe" />
+    <EmbeddedResource Include="Tools\ffprobe.exe" />
+    <EmbeddedResource Include="Tools\avcodec-62.dll" />
+    <EmbeddedResource Include="Tools\avdevice-62.dll" />
+    <EmbeddedResource Include="Tools\avfilter-11.dll" />
+    <EmbeddedResource Include="Tools\avformat-62.dll" />
+    <EmbeddedResource Include="Tools\avutil-60.dll" />
+    <EmbeddedResource Include="Tools\swresample-6.dll" />
+    <EmbeddedResource Include="Tools\swscale-9.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
