@@ -15,14 +15,20 @@ A Windows desktop GUI built on top of [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - Real-time progress bar and log output
 - Auto-updates yt-dlp on startup
 - Supports `cookies.txt` for age-restricted videos
-- Single portable executable (all tools embedded)
+- **Standalone portable executable** — once compiled, the single .exe bundles yt-dlp, FFmpeg, and everything needed. No installation or external dependencies required to run it.
 
-## Requirements
+## Download
+
+Pre-built standalone executables are available on the [Releases](../../releases) page. Just download and run — no setup needed.
+
+## Requirements (Building from Source)
 
 - Windows 10/11 (x64)
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (to build from source)
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ## Building from Source
+
+The tool binaries (yt-dlp, FFmpeg) are too large for git, so they are downloaded during the build setup. Once compiled, they are embedded into the final executable — the resulting .exe is completely standalone.
 
 ### 1. Download required tools
 
@@ -42,7 +48,7 @@ Or manually place these files in `YouTubeDownloader/Tools/`:
 build.bat
 ```
 
-The output will be a single executable at `dist/YouTubeDownloader.exe`.
+The output will be a single standalone executable at `dist/YouTubeDownloader.exe`. You can copy this .exe anywhere and it will work on its own.
 
 On first run, the app extracts the embedded tools to `%LocalAppData%\YouTubeDownloader\tools`. Videos are saved to a `videos` folder next to the executable (or wherever you choose in the UI).
 
