@@ -42,11 +42,20 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBox x:Name="UrlTextBox"
-                                     Grid.Column="0"
-                                     Style="{StaticResource YouTubeTextBox}"
-                                     Height="50"
-                                     VerticalContentAlignment="Center"/>
+                            <Grid Grid.Column="0">
+                                <TextBox x:Name="UrlTextBox"
+                                         Style="{StaticResource YouTubeTextBox}"
+                                         Height="50"
+                                         VerticalContentAlignment="Center"
+                                         KeyDown="UrlTextBox_KeyDown"
+                                         TextChanged="UrlTextBox_TextChanged"/>
+                                <TextBlock x:Name="UrlPlaceholder"
+                                           Text="Paste a YouTube URL here, then press Enter"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="16,0,0,0"
+                                           IsHitTestVisible="False"/>
+                            </Grid>
 
                             <Button x:Name="PasteButton"
                                     Grid.Column="1"
@@ -235,17 +244,44 @@
                 <!-- Progress Section -->
                 <Border Style="{StaticResource CardPanel}">
                     <StackPanel>
-                        <TextBlock Text="Download Progress" Style="{StaticResource SectionTitle}"/>
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Download Progress" Style="{StaticResource SectionTitle}"
+                                       HorizontalAlignment="Left" Margin="0"/>
+                            <Button x:Name="ShowInFolderButton"
+                                    Content="📂 Show in Folder"
+                                    Style="{StaticResource YouTubeButton}"
+                                    HorizontalAlignment="Right"
+                                    Padding="12,6"
+                                    FontSize="12"
+                                    Visibility="Collapsed"
+                                    Click="OpenFolderButton_Click"/>
+                        </Grid>
 
                         <ProgressBar x:Name="DownloadProgressBar"
                                      Style="{StaticResource YouTubeProgressBar}"
                                      Minimum="0" Maximum="100" Value="0"
                                      Margin="0,0,0,8"/>
 
-                        <TextBlock x:Name="ProgressText"
-                                   Text="Ready to download"
-                                   Style="{StaticResource LabelText}"
-                                   Margin="0,0,0,15"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock x:Name="ProgressText"
+                                       Grid.Column="0"
+                                       Text="Ready to download"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"/>
+
+                            <TextBlock x:Name="ProgressStatsText"
+                                       Grid.Column="1"
+                                       Text=""
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
 
                         <Border Background="{StaticResource BgDarkBrush}"
                                 CornerRadius="4"
@@ -255,8 +291,15 @@
                             <ListBox x:Name="LogListBox"
                                      Style="{StaticResource LogListBox}"
                                      BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                                     HorizontalContentAlignment="Stretch"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </Border>
                     </StackPanel>
                 </Border>

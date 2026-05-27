@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Newtonsoft.Json.Linq;
@@ -57,8 +58,47 @@ namespace YouTubeDownloader
                 Log("Cookies file found - age-restricted videos supported.");
             }
 
+            TryAutoPasteUrl();
+
             // Fire-and-forget; UpdateYtDlpAsync handles its own exceptions.
             _ = UpdateYtDlpAsync();
+        }
+
+        private void TryAutoPasteUrl()
+        {
+            try
+            {
+                if (!Clipboard.ContainsText()) return;
+                string text = Clipboard.GetText().Trim();
+                if (text.Length > 0 && text.Length < 2048 &&
+                    Uri.TryCreate(text, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+                    (uri.Host.EndsWith("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+                     uri.Host.EndsWith("youtu.be", StringComparison.OrdinalIgnoreCase)))
+                {
+                    UrlTextBox.Text = text;
+                    Log("Auto-detected YouTube URL from clipboard.");
+                }
+            }
+            catch
+            {
+                // Clipboard access can throw if another app has it locked; ignore.
+            }
+        }
+
+        private void UrlTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && FetchInfoButton.IsEnabled && !_isDownloading)
+            {
+                e.Handled = true;
+                FetchInfoButton_Click(FetchInfoButton, new RoutedEventArgs());
+            }
+        }
+
+        private void UrlTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            UrlPlaceholder.Visibility = string.IsNullOrEmpty(UrlTextBox.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async Task UpdateYtDlpAsync()
@@ -355,7 +395,10 @@ namespace YouTubeDownloader
             DownloadButton.Visibility = Visibility.Collapsed;
             ChannelDownloadButton.Visibility = Visibility.Collapsed;
             CancelButton.Visibility = Visibility.Visible;
+            ShowInFolderButton.Visibility = Visibility.Collapsed;
             DownloadProgressBar.Value = 0;
+            ProgressStatsText.Text = string.Empty;
+            ProgressText.Text = "Starting...";
             ClearLog();
 
             try
@@ -377,8 +420,9 @@ namespace YouTubeDownloader
                 {
                     DownloadProgressBar.Value = 100;
                     ProgressText.Text = "Download complete!";
+                    ProgressStatsText.Text = string.Empty;
+                    ShowInFolderButton.Visibility = Visibility.Visible;
                     Log("\n Download completed successfully!");
-                    MessageBox.Show("Download completed successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (OperationCanceledException)
@@ -574,24 +618,53 @@ namespace YouTubeDownloader
             }
         }
 
+        // [download]  23.4% of  5.32MiB at 1.21MiB/s ETA 00:04
+        private static readonly Regex ProgressRegex = new(
+            @"\[download\]\s+(?<pct>\d+\.?\d*)%(?:\s+of\s+~?\s*(?<size>[\d.]+\s*\w+))?(?:\s+at\s+(?<speed>[\d.]+\s*\w+/s|Unknown\s+B/s))?(?:\s+ETA\s+(?<eta>[\d:-]+))?",
+            RegexOptions.Compiled);
+
         private void ProcessOutputLine(string line)
         {
-            Log(line);
-
-            var match = Regex.Match(line, @"(\d+\.?\d*)%");
-            if (match.Success && double.TryParse(match.Groups[1].Value, out double progress))
+            var match = ProgressRegex.Match(line);
+            if (match.Success && double.TryParse(match.Groups["pct"].Value, out double progress))
             {
+                string size = match.Groups["size"].Value.Trim();
+                string speed = match.Groups["speed"].Value.Trim();
+                string eta = match.Groups["eta"].Value.Trim();
+
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     DownloadProgressBar.Value = progress;
                     ProgressText.Text = $"Downloading: {progress:F1}%";
+
+                    var stats = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(size)) stats.Append(size);
+                    if (!string.IsNullOrEmpty(speed))
+                    {
+                        if (stats.Length > 0) stats.Append("  •  ");
+                        stats.Append(speed);
+                    }
+                    if (!string.IsNullOrEmpty(eta) && eta != "-:-")
+                    {
+                        if (stats.Length > 0) stats.Append("  •  ");
+                        stats.Append("ETA ").Append(eta);
+                    }
+                    ProgressStatsText.Text = stats.ToString();
+                }));
+                // Don't push the noisy per-tick progress lines into the log.
+                return;
+            }
+
+            if (line.Contains("has already been downloaded"))
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    DownloadProgressBar.Value = 100;
+                    ProgressText.Text = "Already downloaded";
                 }));
             }
 
-            if (line.Contains("[download] 100%") || line.Contains("has already been downloaded"))
-            {
-                Dispatcher.BeginInvoke(new Action(() => DownloadProgressBar.Value = 100));
-            }
+            Log(line);
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
