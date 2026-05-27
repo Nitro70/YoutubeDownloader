@@ -26,7 +26,6 @@ namespace YouTubeDownloader
 
         public static void ExtractTools()
         {
-            // Use AppData/Local for extracted tools
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             ToolsDirectory = Path.Combine(appData, "YouTubeDownloader", "tools");
 
@@ -35,16 +34,28 @@ namespace YouTubeDownloader
             var assembly = Assembly.GetExecutingAssembly();
             string resourcePrefix = "YouTubeDownloader.Tools.";
 
+            // Version stamp lets us re-extract when the app ships new embedded tools.
+            // yt-dlp.exe itself is excluded so its self-update is preserved.
+            string appVersion = assembly.GetName().Version?.ToString() ?? "0.0.0.0";
+            string stampPath = Path.Combine(ToolsDirectory, "tools.version");
+            string? existingStamp = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : null;
+            bool versionChanged = existingStamp != appVersion;
+
             foreach (string toolFile in ToolFiles)
             {
                 string destPath = Path.Combine(ToolsDirectory, toolFile);
+                bool isYtDlp = string.Equals(toolFile, "yt-dlp.exe", StringComparison.OrdinalIgnoreCase);
 
-                // Only extract if file doesn't exist or is outdated
-                if (!File.Exists(destPath))
+                // Re-extract if missing, or if version changed (but never overwrite a self-updated yt-dlp).
+                bool shouldExtract = !File.Exists(destPath) || (versionChanged && !isYtDlp);
+
+                if (shouldExtract)
                 {
                     ExtractResource(assembly, resourcePrefix + toolFile, destPath);
                 }
             }
+
+            File.WriteAllText(stampPath, appVersion);
         }
 
         private static void ExtractResource(Assembly assembly, string resourceName, string destPath)
@@ -55,8 +66,19 @@ namespace YouTubeDownloader
                 throw new Exception($"Resource not found: {resourceName}");
             }
 
-            using FileStream fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write);
-            stream.CopyTo(fileStream);
+            // Write to a temp file then move into place so we don't corrupt a partially-written
+            // tool if extraction fails mid-stream (or the file is briefly locked).
+            string tempPath = destPath + ".tmp";
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
+            {
+                stream.CopyTo(fileStream);
+            }
+
+            if (File.Exists(destPath))
+            {
+                File.Delete(destPath);
+            }
+            File.Move(tempPath, destPath);
         }
 
         public static bool ToolsExist()

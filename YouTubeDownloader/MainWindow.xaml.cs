@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -7,16 +8,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace YouTubeDownloader
 {
     public partial class MainWindow : Window
     {
+        private static readonly char[] InvalidFilenameChars =
+            Path.GetInvalidFileNameChars();
+
+        private const int MaxLogRows = 1000;
+
         private readonly string _outputDirectory;
         private readonly string _cookiesPath;
 
         private Process? _currentProcess;
+        private readonly object _processLock = new();
         private CancellationTokenSource? _cancellationTokenSource;
         private bool _isDownloading;
 
@@ -24,7 +32,6 @@ namespace YouTubeDownloader
         {
             InitializeComponent();
 
-            // Extract embedded tools on first run
             try
             {
                 ToolsExtractor.ExtractTools();
@@ -34,18 +41,14 @@ namespace YouTubeDownloader
                 MessageBox.Show($"Failed to extract tools: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            // Set up paths - videos folder next to exe, cookies next to exe
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
             _outputDirectory = Path.Combine(exeDir, "videos");
             _cookiesPath = Path.Combine(exeDir, "cookies.txt");
 
-            // Ensure output directory exists
             Directory.CreateDirectory(_outputDirectory);
 
-            // Set default output directory
             OutputDirTextBox.Text = _outputDirectory;
 
-            // Log startup info
             Log("YouTube Downloader started");
             Log($"Tools location: {ToolsExtractor.ToolsDirectory}");
 
@@ -54,57 +57,62 @@ namespace YouTubeDownloader
                 Log("Cookies file found - age-restricted videos supported.");
             }
 
-            // Auto-update yt-dlp in background
-            Task.Run(() => UpdateYtDlp());
+            // Fire-and-forget; UpdateYtDlpAsync handles its own exceptions.
+            _ = UpdateYtDlpAsync();
         }
 
-        private async Task UpdateYtDlp()
+        private async Task UpdateYtDlpAsync()
         {
             try
             {
-                await Task.Run(() =>
+                var startInfo = new ProcessStartInfo
                 {
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = ToolsExtractor.YtDlpPath,
-                        Arguments = "-U",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    };
+                    FileName = ToolsExtractor.YtDlpPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                startInfo.ArgumentList.Add("-U");
 
-                    using var process = Process.Start(startInfo);
-                    if (process == null) return;
+                using var process = Process.Start(startInfo);
+                if (process == null) return;
 
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-                    process.WaitForExit();
+                string output = await process.StandardOutput.ReadToEndAsync();
+                _ = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
 
-                    if (!string.IsNullOrEmpty(output))
-                    {
-                        Dispatcher.Invoke(() => Log($"yt-dlp update: {output.Trim()}"));
-                    }
-                });
+                if (!string.IsNullOrEmpty(output))
+                {
+                    Log($"yt-dlp update: {output.Trim()}");
+                }
             }
             catch
             {
-                // Silently fail if update doesn't work
+                // Best-effort update; ignore failures.
             }
         }
 
         private void Log(string message)
         {
-            Dispatcher.Invoke(() =>
+            // BeginInvoke avoids blocking the caller; safe to call from worker threads.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
             {
                 LogListBox.Items.Add(message);
-                LogListBox.ScrollIntoView(LogListBox.Items[LogListBox.Items.Count - 1]);
-            });
+                while (LogListBox.Items.Count > MaxLogRows)
+                {
+                    LogListBox.Items.RemoveAt(0);
+                }
+                if (LogListBox.Items.Count > 0)
+                {
+                    LogListBox.ScrollIntoView(LogListBox.Items[LogListBox.Items.Count - 1]);
+                }
+            }));
         }
 
         private void ClearLog()
         {
-            Dispatcher.Invoke(() => LogListBox.Items.Clear());
+            Dispatcher.BeginInvoke(new Action(() => LogListBox.Items.Clear()));
         }
 
         private void PasteButton_Click(object sender, RoutedEventArgs e)
@@ -118,9 +126,9 @@ namespace YouTubeDownloader
         private async void FetchInfoButton_Click(object sender, RoutedEventArgs e)
         {
             string url = UrlTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(url))
+            if (!IsValidHttpUrl(url))
             {
-                MessageBox.Show("Please enter a YouTube URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a valid http(s) URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -147,48 +155,46 @@ namespace YouTubeDownloader
 
         private async Task<JObject?> FetchVideoInfoAsync(string url)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                var startInfo = new ProcessStartInfo
                 {
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = ToolsExtractor.YtDlpPath,
-                        Arguments = $"--dump-json --no-playlist \"{url}\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    };
+                    FileName = ToolsExtractor.YtDlpPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
 
-                    if (File.Exists(_cookiesPath))
-                    {
-                        startInfo.Arguments = $"--cookies \"{_cookiesPath}\" " + startInfo.Arguments;
-                    }
-
-                    using var process = Process.Start(startInfo);
-                    if (process == null) return null;
-
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-                    process.WaitForExit();
-
-                    if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
-                    {
-                        return JObject.Parse(output);
-                    }
-                    else
-                    {
-                        Log($"Error: {error}");
-                        return null;
-                    }
-                }
-                catch (Exception ex)
+                if (File.Exists(_cookiesPath))
                 {
-                    Log($"Exception: {ex.Message}");
-                    return null;
+                    startInfo.ArgumentList.Add("--cookies");
+                    startInfo.ArgumentList.Add(_cookiesPath);
                 }
-            });
+                startInfo.ArgumentList.Add("--dump-json");
+                startInfo.ArgumentList.Add("--no-playlist");
+                startInfo.ArgumentList.Add(url);
+
+                using var process = Process.Start(startInfo);
+                if (process == null) return null;
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                string error = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                {
+                    return JObject.Parse(output);
+                }
+
+                Log($"Error: {error}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log($"Exception: {ex.Message}");
+                return null;
+            }
         }
 
         private async void DisplayVideoInfo(JObject info)
@@ -196,9 +202,7 @@ namespace YouTubeDownloader
             VideoInfoPanel.Visibility = Visibility.Visible;
 
             string title = info["title"]?.ToString() ?? "Unknown";
-            if (title.Length > 80)
-                title = title.Substring(0, 77) + "...";
-            VideoTitleText.Text = title;
+            VideoTitleText.Text = TruncateForDisplay(title, 80);
 
             string channel = info["uploader"]?.ToString() ?? "Unknown";
             ChannelText.Text = $"Channel: {channel}";
@@ -208,14 +212,22 @@ namespace YouTubeDownloader
             int seconds = duration % 60;
             DurationText.Text = $"Duration: {minutes}:{seconds:D2}";
 
-            Log($"Found: {info["title"]}");
+            Log($"Found: {title}");
 
-            // Load thumbnail
             string? thumbnailUrl = info["thumbnail"]?.ToString();
             if (!string.IsNullOrEmpty(thumbnailUrl))
             {
                 await LoadThumbnailAsync(thumbnailUrl);
             }
+        }
+
+        private static string TruncateForDisplay(string s, int max)
+        {
+            if (s.Length <= max) return s;
+            int cut = max - 3;
+            // Don't split a surrogate pair.
+            if (cut > 0 && char.IsHighSurrogate(s[cut - 1])) cut--;
+            return s.Substring(0, cut) + "...";
         }
 
         private async Task LoadThumbnailAsync(string url)
@@ -262,7 +274,11 @@ namespace YouTubeDownloader
             string path = OutputDirTextBox.Text;
             if (Directory.Exists(path))
             {
-                Process.Start("explorer.exe", path);
+                using var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
             }
         }
 
@@ -277,9 +293,9 @@ namespace YouTubeDownloader
         private async void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
             string url = UrlTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(url))
+            if (!IsValidHttpUrl(url))
             {
-                MessageBox.Show("Please enter a YouTube URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a valid http(s) URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -291,9 +307,9 @@ namespace YouTubeDownloader
         private async void ChannelDownloadButton_Click(object sender, RoutedEventArgs e)
         {
             string url = UrlTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(url))
+            if (!IsValidHttpUrl(url))
             {
-                MessageBox.Show("Please enter a YouTube channel URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a valid http(s) channel URL", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -313,12 +329,29 @@ namespace YouTubeDownloader
             }
         }
 
+        private static bool IsValidHttpUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        }
+
+        private static bool TryValidateFilename(string filename, out string error)
+        {
+            error = string.Empty;
+            if (filename.IndexOfAny(InvalidFilenameChars) >= 0)
+            {
+                error = "Filename contains characters that are not allowed.";
+                return false;
+            }
+            return true;
+        }
+
         private async Task StartDownloadAsync(string url, bool isChannel)
         {
             _isDownloading = true;
             _cancellationTokenSource = new CancellationTokenSource();
 
-            // Update UI
             DownloadButton.Visibility = Visibility.Collapsed;
             ChannelDownloadButton.Visibility = Visibility.Collapsed;
             CancelButton.Visibility = Visibility.Visible;
@@ -327,9 +360,16 @@ namespace YouTubeDownloader
 
             try
             {
-                string args = BuildDownloadArguments(url, isChannel);
-                Log($"Starting download...");
-                Log($"Command: yt-dlp {args}");
+                var args = BuildDownloadArguments(url, isChannel, out string? validationError);
+                if (args == null)
+                {
+                    Log($"Error: {validationError}");
+                    MessageBox.Show(validationError, "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                Log("Starting download...");
+                Log($"Command: yt-dlp {string.Join(" ", args)}");
 
                 await RunDownloadProcessAsync(args, _cancellationTokenSource.Token);
 
@@ -354,176 +394,183 @@ namespace YouTubeDownloader
             finally
             {
                 _isDownloading = false;
-                _currentProcess = null;
+                lock (_processLock)
+                {
+                    _currentProcess?.Dispose();
+                    _currentProcess = null;
+                }
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
 
-                // Restore UI
                 DownloadButton.Visibility = Visibility.Visible;
                 ChannelDownloadButton.Visibility = Visibility.Visible;
                 CancelButton.Visibility = Visibility.Collapsed;
             }
         }
 
-        private string NormalizeChannelUrl(string url)
+        private static string NormalizeChannelUrl(string url)
         {
-            // Normalize channel URL to download all videos
-            // Handles: @username, /c/name, /channel/ID, /user/name
-            if (url.Contains("youtube.com/@") ||
-                url.Contains("youtube.com/c/") ||
-                url.Contains("youtube.com/channel/") ||
-                url.Contains("youtube.com/user/"))
-            {
-                // Remove trailing slash
-                url = url.TrimEnd('/');
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
 
-                // If URL doesn't end with /videos, add it
-                if (!url.EndsWith("/videos"))
-                {
-                    url += "/videos";
-                }
+            string host = uri.Host.ToLowerInvariant();
+            if (!host.EndsWith("youtube.com")) return url;
+
+            string path = uri.AbsolutePath;
+            bool isChannelPath =
+                path.StartsWith("/@") ||
+                path.StartsWith("/c/") ||
+                path.StartsWith("/channel/") ||
+                path.StartsWith("/user/");
+
+            if (!isChannelPath) return url;
+
+            string trimmed = path.TrimEnd('/');
+            if (!trimmed.EndsWith("/videos"))
+            {
+                trimmed += "/videos";
             }
 
-            return url;
+            var builder = new UriBuilder(uri) { Path = trimmed };
+            return builder.Uri.ToString();
         }
 
-        private string BuildDownloadArguments(string url, bool isChannel)
+        private List<string>? BuildDownloadArguments(string url, bool isChannel, out string? error)
         {
-            var args = new System.Text.StringBuilder();
+            error = null;
+            var args = new List<string>();
 
-            // FFmpeg location
-            args.Append($"--ffmpeg-location \"{ToolsExtractor.FfmpegDirectory}\" ");
+            args.Add("--ffmpeg-location");
+            args.Add(ToolsExtractor.FfmpegDirectory);
 
-            // Cookies
             if (File.Exists(_cookiesPath))
             {
-                args.Append($"--cookies \"{_cookiesPath}\" ");
+                args.Add("--cookies");
+                args.Add(_cookiesPath);
             }
 
-            // Progress output
-            args.Append("--newline --progress ");
+            args.Add("--newline");
+            args.Add("--progress");
 
-            // Format selection
             bool isMp3 = Mp3Radio.IsChecked == true;
             string outputDir = OutputDirTextBox.Text;
             string filename = FilenameTextBox.Text.Trim();
 
+            if (!string.IsNullOrEmpty(filename) && !TryValidateFilename(filename, out string fnError))
+            {
+                error = fnError;
+                return null;
+            }
+
+            string outputTemplate = !string.IsNullOrEmpty(filename) && !isChannel
+                ? Path.Combine(outputDir, filename + ".%(ext)s")
+                : Path.Combine(outputDir, "%(title)s.%(ext)s");
+
             if (isMp3)
             {
-                args.Append("-x --audio-format mp3 --audio-quality 0 ");
-
-                if (!string.IsNullOrEmpty(filename) && !isChannel)
-                {
-                    args.Append($"-o \"{Path.Combine(outputDir, filename + ".%(ext)s")}\" ");
-                }
-                else
-                {
-                    args.Append($"-o \"{Path.Combine(outputDir, "%(title)s.%(ext)s")}\" ");
-                }
+                args.Add("-x");
+                args.Add("--audio-format");
+                args.Add("mp3");
+                args.Add("--audio-quality");
+                args.Add("0");
             }
             else
             {
-                // Video format
                 string quality = (QualityComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString() ?? "Best";
+                string formatSpec = quality == "Best"
+                    ? "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+                    : $"bestvideo[height<={quality.Replace("p", "")}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality.Replace("p", "")}][ext=mp4]/best";
 
-                if (quality == "Best")
-                {
-                    args.Append("-f \"bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best\" ");
-                }
-                else
-                {
-                    string height = quality.Replace("p", "");
-                    args.Append($"-f \"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/best[height<={height}][ext=mp4]/best\" ");
-                }
-
-                args.Append("--merge-output-format mp4 ");
-
-                if (!string.IsNullOrEmpty(filename) && !isChannel)
-                {
-                    args.Append($"-o \"{Path.Combine(outputDir, filename + ".%(ext)s")}\" ");
-                }
-                else
-                {
-                    args.Append($"-o \"{Path.Combine(outputDir, "%(title)s.%(ext)s")}\" ");
-                }
+                args.Add("-f");
+                args.Add(formatSpec);
+                args.Add("--merge-output-format");
+                args.Add("mp4");
             }
 
-            // Normalize channel URL if downloading entire channel
+            args.Add("-o");
+            args.Add(outputTemplate);
+
             if (isChannel)
             {
                 url = NormalizeChannelUrl(url);
-                args.Append("--yes-playlist ");
+                args.Add("--yes-playlist");
             }
             else
             {
-                args.Append("--no-playlist ");
+                args.Add("--no-playlist");
             }
 
-            args.Append($"\"{url}\"");
-
-            return args.ToString();
+            args.Add(url);
+            return args;
         }
 
-        private async Task RunDownloadProcessAsync(string arguments, CancellationToken cancellationToken)
+        private async Task RunDownloadProcessAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = ToolsExtractor.YtDlpPath,
-                Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            foreach (var a in arguments) startInfo.ArgumentList.Add(a);
 
-            _currentProcess = new Process { StartInfo = startInfo };
-            _currentProcess.Start();
+            Process process;
+            lock (_processLock)
+            {
+                _currentProcess = new Process { StartInfo = startInfo };
+                process = _currentProcess;
+            }
 
-            // Read output asynchronously
+            process.Start();
+
+            // Register kill on cancellation so we don't poll.
+            using var killReg = cancellationToken.Register(() =>
+            {
+                try
+                {
+                    if (!process.HasExited) process.Kill(true);
+                }
+                catch { /* process already gone */ }
+            });
+
             var outputTask = Task.Run(async () =>
             {
-                while (!_currentProcess.StandardOutput.EndOfStream)
+                string? line;
+                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
                 {
-                    string? line = await _currentProcess.StandardOutput.ReadLineAsync();
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        ProcessOutputLine(line);
-                    }
+                    if (!string.IsNullOrEmpty(line)) ProcessOutputLine(line);
                 }
-            }, cancellationToken);
+            });
 
             var errorTask = Task.Run(async () =>
             {
-                while (!_currentProcess.StandardError.EndOfStream)
+                string? line;
+                while ((line = await process.StandardError.ReadLineAsync()) != null)
                 {
-                    string? line = await _currentProcess.StandardError.ReadLineAsync();
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        Log(line);
-                    }
+                    if (!string.IsNullOrEmpty(line)) Log(line);
                 }
-            }, cancellationToken);
+            });
 
-            // Wait for process with cancellation support
-            while (!_currentProcess.HasExited)
+            try
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    try
-                    {
-                        _currentProcess.Kill(true);
-                    }
-                    catch { }
-                    throw new OperationCanceledException();
-                }
-                await Task.Delay(100, cancellationToken);
+                await process.WaitForExitAsync(CancellationToken.None);
+            }
+            finally
+            {
+                // Always drain readers so we don't orphan them, even on cancel.
+                try { await Task.WhenAll(outputTask, errorTask); }
+                catch { /* readers complete on stream close */ }
             }
 
-            await Task.WhenAll(outputTask, errorTask);
-
-            if (_currentProcess.ExitCode != 0 && !cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
-                throw new Exception($"yt-dlp exited with code {_currentProcess.ExitCode}");
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"yt-dlp exited with code {process.ExitCode}");
             }
         }
 
@@ -531,21 +578,19 @@ namespace YouTubeDownloader
         {
             Log(line);
 
-            // Parse progress percentage
             var match = Regex.Match(line, @"(\d+\.?\d*)%");
             if (match.Success && double.TryParse(match.Groups[1].Value, out double progress))
             {
-                Dispatcher.Invoke(() =>
+                Dispatcher.BeginInvoke(new Action(() =>
                 {
                     DownloadProgressBar.Value = progress;
                     ProgressText.Text = $"Downloading: {progress:F1}%";
-                });
+                }));
             }
 
-            // Check for completion
             if (line.Contains("[download] 100%") || line.Contains("has already been downloaded"))
             {
-                Dispatcher.Invoke(() => DownloadProgressBar.Value = 100);
+                Dispatcher.BeginInvoke(new Action(() => DownloadProgressBar.Value = 100));
             }
         }
 
