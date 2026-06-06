@@ -1,67 +1,76 @@
 # YouTube Downloader
 
-A Windows desktop GUI built on top of [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). This application does not implement any downloading logic itself — it provides a visual interface for yt-dlp, which does all the heavy lifting.
+A cross-platform (Windows + Linux) desktop GUI built on top of [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). The app does not implement any downloading logic itself — it's a visual front-end for yt-dlp, which does all the heavy lifting.
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
-- YouTube-themed dark UI
+- YouTube-themed dark UI built with [Avalonia](https://avaloniaui.net/)
 - Paste a URL and fetch video info (title, channel, duration, thumbnail)
 - Download as **MP4** video with quality selection (Best, 1080p, 720p, 480p, 360p)
 - Download as **MP3** audio-only extraction
 - Download entire channels/playlists
 - Custom filename and save location
-- Real-time progress bar and log output
+- Live progress bar showing size, speed, and ETA
 - Auto-updates yt-dlp on startup
 - Supports `cookies.txt` for age-restricted videos
-- **Standalone portable executable** — once compiled, the single .exe bundles yt-dlp, FFmpeg, and everything needed. No installation or external dependencies required to run it.
+- **Standalone portable binaries** — the single executable bundles yt-dlp, FFmpeg, and the .NET runtime. No installation or external dependencies required to run it.
 
 ## Download
 
-Pre-built standalone executables are available on the [Releases](../../releases) page. Just download and run — no setup needed.
+Pre-built standalone binaries are available on the [Releases](../../releases) page:
+
+- **Windows (x64):** `YouTubeDownloader.exe` — double-click to run.
+- **Linux (x64):** `YouTubeDownloader` — `chmod +x` it and run from your file manager or a terminal.
 
 ## Requirements (Building from Source)
 
-- Windows 10/11 (x64)
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- `curl` and `unzip`/`tar` to pull bundled tool binaries
+- Windows or Linux (you can cross-compile both targets from either host)
 
 ## Building from Source
 
-The tool binaries (yt-dlp, FFmpeg) are too large for git, so they are downloaded during the build setup. Once compiled, they are embedded into the final executable — the resulting .exe is completely standalone.
+The bundled tool binaries (yt-dlp, FFmpeg) are too large for git and are downloaded during setup. They get embedded into the final executable — the result is completely standalone.
 
-### 1. Download required tools
-
-Run `setup_tools.bat` to automatically download [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://github.com/yt-dlp/FFmpeg-Builds) into the `YouTubeDownloader/Tools/` folder:
+### Windows host
 
 ```bash
 setup_tools.bat
-```
-
-Or manually place these files in `YouTubeDownloader/Tools/`:
-- `yt-dlp.exe` — from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
-- `ffmpeg.exe`, `ffprobe.exe`, and FFmpeg DLLs — from [FFmpeg builds](https://github.com/yt-dlp/FFmpeg-Builds/releases)
-
-### 2. Build and publish
-
-```bash
 build.bat
 ```
 
-The output will be a single standalone executable at `dist/YouTubeDownloader.exe`. You can copy this .exe anywhere and it will work on its own.
+Produces:
+- `dist\win-x64\YouTubeDownloader.exe`
+- `dist\linux-x64\YouTubeDownloader` (cross-compiled Linux binary)
 
-On first run, the app extracts the embedded tools to `%LocalAppData%\YouTubeDownloader\tools`. Videos are saved to a `videos` folder next to the executable (or wherever you choose in the UI).
+### Linux host
+
+```bash
+./setup_tools.sh
+./build.sh
+```
+
+Produces the same two binaries.
+
+On first run, the app extracts the embedded tools to:
+- Windows: `%LocalAppData%\YouTubeDownloader\tools`
+- Linux: `~/.local/share/YouTubeDownloader/tools`
+
+Videos save to a `videos` folder next to the binary (or wherever you choose in the UI).
 
 ## Cookies (Optional)
 
-For age-restricted or private videos, place a `cookies.txt` file next to the executable. You can export cookies from your browser using extensions like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
+For age-restricted or private videos, place a `cookies.txt` file next to the binary. You can export cookies from your browser using extensions like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
 
 ## Credits
 
-This project is a GUI wrapper and would not exist without these tools:
+This project is a GUI wrapper and would not exist without:
 
-- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — The command-line downloader that powers all video/audio downloading and metadata fetching. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
-- **[FFmpeg](https://ffmpeg.org/)** — Used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds).
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — powers all video/audio downloading. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
+- **[FFmpeg](https://ffmpeg.org/)** — used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Windows builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds); Linux static builds from [johnvansickle.com](https://johnvansickle.com/ffmpeg/).
+- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework that makes the Linux build possible.
 
 ## License
 

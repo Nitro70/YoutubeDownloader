@@ -2,40 +2,59 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
     <AssemblyName>YouTubeDownloader</AssemblyName>
     <RootNamespace>YouTubeDownloader</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>2.0.0</Version>
     <Authors>YouTubeDownloader</Authors>
-    <Description>A YouTube-themed video downloader</Description>
+    <Description>A cross-platform YouTube video downloader</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 
-    <!-- Single file settings -->
+    <!-- Single-file publish settings -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Embed yt-dlp and ffmpeg as resources -->
-    <EmbeddedResource Include="Tools\yt-dlp.exe" />
-    <EmbeddedResource Include="Tools\ffmpeg.exe" />
-    <EmbeddedResource Include="Tools\ffprobe.exe" />
-    <EmbeddedResource Include="Tools\avcodec-62.dll" />
-    <EmbeddedResource Include="Tools\avdevice-62.dll" />
-    <EmbeddedResource Include="Tools\avfilter-11.dll" />
-    <EmbeddedResource Include="Tools\avformat-62.dll" />
-    <EmbeddedResource Include="Tools\avutil-60.dll" />
-    <EmbeddedResource Include="Tools\swresample-6.dll" />
-    <EmbeddedResource Include="Tools\swscale-9.dll" />
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+    <PackageReference Include="MessageBox.Avalonia" Version="3.3.1.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <AvaloniaResource Include="Assets\**" Condition="Exists('Assets')" />
+  </ItemGroup>
+
+  <!-- Per-RID embedded tools. The Tools\ folder layout is:
+         Tools\win-x64\   yt-dlp.exe, ffmpeg.exe, ffprobe.exe, *.dll
+         Tools\linux-x64\ yt-dlp, ffmpeg, ffprobe
+       We embed only the binaries that match the publish RID so each
+       single-file build carries one platform's toolchain, not both. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == ''">
+    <EmbeddedResource Include="Tools\win-x64\yt-dlp.exe"   LogicalName="YouTubeDownloader.Tools.yt-dlp.exe" />
+    <EmbeddedResource Include="Tools\win-x64\ffmpeg.exe"   LogicalName="YouTubeDownloader.Tools.ffmpeg.exe" />
+    <EmbeddedResource Include="Tools\win-x64\ffprobe.exe"  LogicalName="YouTubeDownloader.Tools.ffprobe.exe" />
+    <EmbeddedResource Include="Tools\win-x64\avcodec-62.dll"    LogicalName="YouTubeDownloader.Tools.avcodec-62.dll" />
+    <EmbeddedResource Include="Tools\win-x64\avdevice-62.dll"   LogicalName="YouTubeDownloader.Tools.avdevice-62.dll" />
+    <EmbeddedResource Include="Tools\win-x64\avfilter-11.dll"   LogicalName="YouTubeDownloader.Tools.avfilter-11.dll" />
+    <EmbeddedResource Include="Tools\win-x64\avformat-62.dll"   LogicalName="YouTubeDownloader.Tools.avformat-62.dll" />
+    <EmbeddedResource Include="Tools\win-x64\avutil-60.dll"     LogicalName="YouTubeDownloader.Tools.avutil-60.dll" />
+    <EmbeddedResource Include="Tools\win-x64\swresample-6.dll"  LogicalName="YouTubeDownloader.Tools.swresample-6.dll" />
+    <EmbeddedResource Include="Tools\win-x64\swscale-9.dll"     LogicalName="YouTubeDownloader.Tools.swscale-9.dll" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <EmbeddedResource Include="Tools\linux-x64\yt-dlp"   LogicalName="YouTubeDownloader.Tools.yt-dlp" />
+    <EmbeddedResource Include="Tools\linux-x64\ffmpeg"   LogicalName="YouTubeDownloader.Tools.ffmpeg" />
+    <EmbeddedResource Include="Tools\linux-x64\ffprobe"  LogicalName="YouTubeDownloader.Tools.ffprobe" />
   </ItemGroup>
 
 </Project>

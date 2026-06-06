@@ -1,0 +1,215 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="YouTubeDownloader.MainWindow"
+        Title="YouTube Downloader"
+        Width="950" Height="750"
+        MinWidth="850" MinHeight="650"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BgDarkBrush}">
+
+    <Grid RowDefinitions="60,*,40">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource BgSecondaryBrush}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                <TextBlock Text="▶" FontSize="28" FontWeight="Bold"
+                           Foreground="{DynamicResource RedBrush}"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="YouTube Downloader" Classes="header"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main content -->
+        <ScrollViewer Grid.Row="1" Padding="20">
+            <StackPanel>
+
+                <!-- URL card -->
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="Video URL" Classes="section"/>
+
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <Panel Grid.Column="0">
+                                <TextBox Name="UrlTextBox" Classes="yt" Height="50"
+                                         KeyDown="UrlTextBox_KeyDown"
+                                         TextChanged="UrlTextBox_TextChanged"/>
+                                <TextBlock Name="UrlPlaceholder"
+                                           Text="Paste a YouTube URL here, then press Enter"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="16,0,0,0"
+                                           IsHitTestVisible="False"/>
+                            </Panel>
+
+                            <Button Name="PasteButton" Grid.Column="1"
+                                    Content="📋 Paste" Classes="yt"
+                                    Margin="10,0,0,0" Height="50"
+                                    Click="PasteButton_Click"/>
+
+                            <Button Name="FetchInfoButton" Grid.Column="2"
+                                    Content="🔍 Fetch Info" Classes="red"
+                                    Margin="10,0,0,0" Height="50"
+                                    Click="FetchInfoButton_Click"/>
+                        </Grid>
+
+                        <Border Name="VideoInfoPanel"
+                                Background="{DynamicResource BgDarkBrush}"
+                                CornerRadius="8"
+                                Margin="0,15,0,0"
+                                Padding="15"
+                                IsVisible="False">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Image Name="ThumbnailImage" Grid.Column="0"
+                                       Width="160" Height="90"
+                                       Stretch="UniformToFill"
+                                       Margin="0,0,15,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Name="VideoTitleText"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               FontSize="14" FontWeight="SemiBold"
+                                               TextWrapping="Wrap" MaxHeight="40"/>
+                                    <TextBlock Name="ChannelText" Classes="label" Margin="0,5,0,0"/>
+                                    <TextBlock Name="DurationText" Classes="label" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Download options card -->
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="Download Options" Classes="section"/>
+
+                        <Grid ColumnDefinitions="Auto,40,Auto" RowDefinitions="Auto">
+                            <StackPanel Grid.Column="0" Grid.Row="0">
+                                <TextBlock Text="Format" Classes="label" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Name="Mp4Radio" Classes="format" GroupName="format"
+                                                 Content="🎬 MP4 (Video)" IsChecked="True"
+                                                 IsCheckedChanged="FormatRadio_Changed"/>
+                                    <RadioButton Name="Mp3Radio" Classes="format" GroupName="format"
+                                                 Content="🎵 MP3 (Audio)"
+                                                 IsCheckedChanged="FormatRadio_Changed"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Grid.Row="0">
+                                <TextBlock Text="Quality" Classes="label" Margin="0,0,0,8"/>
+                                <ComboBox Name="QualityComboBox" Classes="yt"
+                                          Width="150" Height="44" SelectedIndex="0">
+                                    <ComboBoxItem Content="Best"/>
+                                    <ComboBoxItem Content="1080p"/>
+                                    <ComboBoxItem Content="720p"/>
+                                    <ComboBoxItem Content="480p"/>
+                                    <ComboBoxItem Content="360p"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Margin="0,20,0,0">
+                            <TextBlock Text="Custom Filename (optional - leave empty for original title)"
+                                       Classes="label" Margin="0,0,0,8"/>
+                            <TextBox Name="FilenameTextBox" Classes="yt" Height="48"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,15,0,0">
+                            <TextBlock Text="Save Location" Classes="label" Margin="0,0,0,8"/>
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBox Name="OutputDirTextBox" Grid.Column="0"
+                                         Classes="yt" Height="48" IsReadOnly="True"/>
+                                <Button Name="BrowseButton" Grid.Column="1"
+                                        Content="📁 Browse" Classes="yt"
+                                        Margin="10,0,0,0" Height="48"
+                                        Click="BrowseButton_Click"/>
+                                <Button Name="OpenFolderButton" Grid.Column="2"
+                                        Content="📂 Open" Classes="yt"
+                                        Margin="10,0,0,0" Height="48"
+                                        Click="OpenFolderButton_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Download buttons -->
+                <Grid ColumnDefinitions="*,15,*" Margin="0,0,0,15">
+                    <Button Name="DownloadButton" Grid.Column="0"
+                            Content="⬇️  Download Video" Classes="red"
+                            HorizontalAlignment="Stretch"
+                            Height="55" FontSize="16"
+                            Click="DownloadButton_Click"/>
+                    <Button Name="ChannelDownloadButton" Grid.Column="2"
+                            Content="📺  Download Entire Channel" Classes="outline"
+                            HorizontalAlignment="Stretch"
+                            Height="55" FontSize="16"
+                            Click="ChannelDownloadButton_Click"/>
+                </Grid>
+
+                <Button Name="CancelButton"
+                        Content="❌  Cancel Download" Classes="red"
+                        HorizontalAlignment="Stretch"
+                        Height="55" FontSize="16"
+                        Margin="0,0,0,15"
+                        IsVisible="False"
+                        Click="CancelButton_Click"/>
+
+                <!-- Progress card -->
+                <Border Classes="card">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Download Progress" Classes="section"
+                                       HorizontalAlignment="Left" Margin="0"/>
+                            <Button Name="ShowInFolderButton"
+                                    Content="📂 Show in Folder" Classes="yt"
+                                    HorizontalAlignment="Right"
+                                    Padding="12,6" FontSize="12"
+                                    IsVisible="False"
+                                    Click="OpenFolderButton_Click"/>
+                        </Grid>
+
+                        <ProgressBar Name="DownloadProgressBar" Classes="yt"
+                                     Minimum="0" Maximum="100" Value="0"
+                                     Margin="0,0,0,8"/>
+
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,15">
+                            <TextBlock Name="ProgressText" Grid.Column="0"
+                                       Text="Ready to download"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Name="ProgressStatsText" Grid.Column="1" Text=""
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="12" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Border Background="{DynamicResource BgDarkBrush}"
+                                CornerRadius="4"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                Height="180">
+                            <ListBox Name="LogListBox" Classes="log"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{DynamicResource BgSecondaryBrush}">
+            <TextBlock Text="Powered by yt-dlp &amp; FFmpeg  •  YouTube Downloader v2.0"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="11"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</Window>

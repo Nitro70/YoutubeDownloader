@@ -1,0 +1,224 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <!-- YouTube Color Palette -->
+        <Color x:Key="YouTubeBgDark">#FF0F0F0F</Color>
+        <Color x:Key="YouTubeBgSecondary">#FF212121</Color>
+        <Color x:Key="YouTubeBgHover">#FF272727</Color>
+        <Color x:Key="YouTubeBgElevated">#FF282828</Color>
+        <Color x:Key="YouTubeBgInput">#FF121212</Color>
+        <Color x:Key="YouTubeTextPrimary">#FFFFFFFF</Color>
+        <Color x:Key="YouTubeTextSecondary">#FFAAAAAA</Color>
+        <Color x:Key="YouTubeRed">#FFFF0000</Color>
+        <Color x:Key="YouTubeRedHover">#FFCC0000</Color>
+        <Color x:Key="YouTubeRedPressed">#FF990000</Color>
+        <Color x:Key="YouTubeBorder">#FF303030</Color>
+        <Color x:Key="YouTubeBorderFocus">#FF606060</Color>
+        <Color x:Key="YouTubeSuccess">#FF2BA640</Color>
+
+        <SolidColorBrush x:Key="BgDarkBrush"        Color="{StaticResource YouTubeBgDark}"/>
+        <SolidColorBrush x:Key="BgSecondaryBrush"   Color="{StaticResource YouTubeBgSecondary}"/>
+        <SolidColorBrush x:Key="BgHoverBrush"       Color="{StaticResource YouTubeBgHover}"/>
+        <SolidColorBrush x:Key="BgElevatedBrush"    Color="{StaticResource YouTubeBgElevated}"/>
+        <SolidColorBrush x:Key="BgInputBrush"       Color="{StaticResource YouTubeBgInput}"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush"   Color="{StaticResource YouTubeTextPrimary}"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource YouTubeTextSecondary}"/>
+        <SolidColorBrush x:Key="RedBrush"           Color="{StaticResource YouTubeRed}"/>
+        <SolidColorBrush x:Key="RedHoverBrush"      Color="{StaticResource YouTubeRedHover}"/>
+        <SolidColorBrush x:Key="RedPressedBrush"    Color="{StaticResource YouTubeRedPressed}"/>
+        <SolidColorBrush x:Key="BorderBrush"        Color="{StaticResource YouTubeBorder}"/>
+        <SolidColorBrush x:Key="BorderFocusBrush"   Color="{StaticResource YouTubeBorderFocus}"/>
+        <SolidColorBrush x:Key="SuccessBrush"       Color="{StaticResource YouTubeSuccess}"/>
+    </Styles.Resources>
+
+    <!-- Window -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{StaticResource BgDarkBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily" Value="Inter,Segoe UI,Arial,sans-serif"/>
+    </Style>
+
+    <!-- TextBlock classes -->
+    <Style Selector="TextBlock.header">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style Selector="TextBlock.section">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <!-- Card -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="Margin" Value="0,0,0,15"/>
+    </Style>
+
+    <!-- Default (neutral) Button -->
+    <Style Selector="Button.yt">
+        <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.yt:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="Button.yt:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+    </Style>
+    <Style Selector="Button.yt:disabled">
+        <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+
+    <!-- Red primary button -->
+    <Style Selector="Button.red">
+        <Setter Property="Background" Value="{StaticResource RedBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.red:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource RedHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.red:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource RedPressedBrush}"/>
+    </Style>
+    <Style Selector="Button.red:disabled">
+        <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+
+    <!-- Outline button -->
+    <Style Selector="Button.outline">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource RedBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.outline:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.outline:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="Button.outline:disabled">
+        <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+
+    <!-- TextBox -->
+    <Style Selector="TextBox.yt">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource RedBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="TextBox.yt:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderFocusBrush}"/>
+    </Style>
+    <Style Selector="TextBox.yt:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderFocusBrush}"/>
+    </Style>
+
+    <!-- ComboBox -->
+    <Style Selector="ComboBox.yt">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- ProgressBar -->
+    <Style Selector="ProgressBar.yt">
+        <Setter Property="Background" Value="{StaticResource BgDarkBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource RedBrush}"/>
+        <Setter Property="Height" Value="6"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <!-- RadioButton, format-picker style: rectangular pill -->
+    <Style Selector="RadioButton.format">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Margin" Value="0,0,12,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="root"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="4"
+                        Padding="{TemplateBinding Padding}">
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Content="{TemplateBinding Content}"
+                                      Foreground="{TemplateBinding Foreground}"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="RadioButton.format:pointerover /template/ Border#root">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="RadioButton.format:checked /template/ Border#root">
+        <Setter Property="Background" Value="{StaticResource RedBrush}"/>
+    </Style>
+    <Style Selector="RadioButton.format:checked:pointerover /template/ Border#root">
+        <Setter Property="Background" Value="{StaticResource RedHoverBrush}"/>
+    </Style>
+
+    <!-- Log ListBox -->
+    <Style Selector="ListBox.log">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,Menlo,monospace"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Padding" Value="6"/>
+    </Style>
+    <Style Selector="ListBox.log ListBoxItem">
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.log ListBoxItem /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+</Styles>
