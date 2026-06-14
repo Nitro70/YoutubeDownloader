@@ -68,15 +68,17 @@ jobs:
 
       - name: Fetch Linux tools (yt-dlp + static ffmpeg)
         run: |
+          set -e
           dest=YouTubeDownloader/Tools/linux-x64
           mkdir -p "$dest"
-          curl -L -o "$dest/yt-dlp" \
+          curl -fL -o "$dest/yt-dlp" \
             https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
-          curl -L -o "$dest/ffmpeg.tar.xz" \
-            https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+          # yt-dlp's own static FFmpeg build (reliable GitHub host).
+          curl -fL -o "$dest/ffmpeg.tar.xz" \
+            https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz
           tar -xf "$dest/ffmpeg.tar.xz" -C "$dest"
-          d=$(ls -d "$dest"/ffmpeg-*-amd64-static | head -1)
-          cp "$d/ffmpeg" "$d/ffprobe" "$dest/"
+          d=$(ls -d "$dest"/ffmpeg-*-linux64-gpl | head -1)
+          cp "$d/bin/ffmpeg" "$d/bin/ffprobe" "$dest/"
           rm -rf "$d" "$dest/ffmpeg.tar.xz"
 
       - name: Publish single-file binary
@@ -108,6 +110,22 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      # The macOS runner defaults to a newer SDK whose iOS workload ships
+      # net9/net10 packs and flags net8.0-ios as EOL. Pin to the .NET 8 SDK
+      # so its iOS workload (net8 / iOS 17 SDK) matches Avalonia.iOS 11.2.3
+      # (net8.0-ios17.0) and the runner's Xcode 15.
+      - name: Pin .NET 8 SDK
+        run: |
+          cat > global.json <<'JSON'
+          {
+            "sdk": {
+              "version": "8.0.0",
+              "rollForward": "latestFeature"
+            }
+          }
+          JSON
+          dotnet --version
 
       - name: Install iOS workload
         run: dotnet workload install ios

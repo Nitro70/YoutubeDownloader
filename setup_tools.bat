@@ -53,12 +53,12 @@ if not exist "%LIN_DEST%\yt-dlp" (
 
 if not exist "%LIN_DEST%\ffmpeg" (
     echo Downloading Linux static FFmpeg...
-    curl -L -o "%LIN_DEST%\ffmpeg.tar.xz" "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+    curl -L -o "%LIN_DEST%\ffmpeg.tar.xz" "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
     echo Extracting...
     tar -xf "%LIN_DEST%\ffmpeg.tar.xz" -C "%LIN_DEST%"
-    for /d %%D in ("%LIN_DEST%\ffmpeg-*-amd64-static") do (
-        copy "%%D\ffmpeg" "%LIN_DEST%\" >nul
-        copy "%%D\ffprobe" "%LIN_DEST%\" >nul
+    for /d %%D in ("%LIN_DEST%\ffmpeg-*-linux64-gpl") do (
+        copy "%%D\bin\ffmpeg" "%LIN_DEST%\" >nul
+        copy "%%D\bin\ffprobe" "%LIN_DEST%\" >nul
         rmdir /s /q "%%D"
     )
     del "%LIN_DEST%\ffmpeg.tar.xz" >nul 2>&1

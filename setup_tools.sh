@@ -51,11 +51,11 @@ fi
 
 if [[ ! -f "$LIN_DEST/ffmpeg" ]]; then
     echo "Downloading Linux static FFmpeg..."
-    curl -L -o "$LIN_DEST/ffmpeg.tar.xz" \
-        "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+    curl -fL -o "$LIN_DEST/ffmpeg.tar.xz" \
+        "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
     tar -xf "$LIN_DEST/ffmpeg.tar.xz" -C "$LIN_DEST"
-    for d in "$LIN_DEST"/ffmpeg-*-amd64-static; do
-        cp "$d/ffmpeg" "$d/ffprobe" "$LIN_DEST/"
+    for d in "$LIN_DEST"/ffmpeg-*-linux64-gpl; do
+        cp "$d/bin/ffmpeg" "$d/bin/ffprobe" "$LIN_DEST/"
         rm -rf "$d"
     done
     rm -f "$LIN_DEST/ffmpeg.tar.xz"
