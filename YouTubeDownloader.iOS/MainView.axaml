@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YouTubeDownloader.iOS.MainView"
+             Background="{DynamicResource BgDarkBrush}">
+
+    <ScrollViewer>
+        <StackPanel Margin="16,50,16,24" Spacing="0">
+
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+                <TextBlock Text="▶" FontSize="26" FontWeight="Bold"
+                           Foreground="{DynamicResource RedBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="YouTube Downloader" Classes="header"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- URL card -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Video URL" Classes="label"/>
+                    <Panel>
+                        <TextBox Name="UrlTextBox" Classes="yt"
+                                 TextChanged="UrlTextBox_TextChanged"/>
+                        <TextBlock Name="UrlPlaceholder"
+                                   Text="Paste a YouTube link…"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="15,0,0,0"
+                                   IsHitTestVisible="False"/>
+                    </Panel>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <Button Name="PasteButton" Grid.Column="0"
+                                Content="📋 Paste" Classes="ghost"
+                                Click="PasteButton_Click"/>
+                        <Button Name="FetchButton" Grid.Column="2"
+                                Content="🔍 Fetch Info" Classes="red"
+                                Click="FetchButton_Click"/>
+                    </Grid>
+
+                    <!-- Video info -->
+                    <Border Name="VideoInfoPanel"
+                            Background="{DynamicResource BgDarkBrush}"
+                            CornerRadius="10" Padding="12"
+                            IsVisible="False">
+                        <StackPanel Spacing="10">
+                            <Image Name="ThumbnailImage"
+                                   Height="180"
+                                   Stretch="UniformToFill"/>
+                            <TextBlock Name="VideoTitleText"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Name="ChannelText" Classes="label"/>
+                            <TextBlock Name="DurationText" Classes="label"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Options card -->
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Format" Classes="label"/>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <RadioButton Name="VideoRadio" Grid.Column="0" Classes="format"
+                                     GroupName="fmt" Content="🎬 Video (MP4)" IsChecked="True"/>
+                        <RadioButton Name="AudioRadio" Grid.Column="2" Classes="format"
+                                     GroupName="fmt" Content="🎵 Audio (M4A)"/>
+                    </Grid>
+                    <TextBlock Text="Custom filename (optional)" Classes="label" Margin="0,4,0,0"/>
+                    <TextBox Name="FilenameTextBox" Classes="yt"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Download -->
+            <Button Name="DownloadButton"
+                    Content="⬇️  Download" Classes="red"
+                    Margin="0,0,0,14"
+                    Click="DownloadButton_Click"/>
+
+            <Button Name="CancelButton"
+                    Content="❌  Cancel" Classes="ghost"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,0,14"
+                    IsVisible="False"
+                    Click="CancelButton_Click"/>
+
+            <!-- Progress card -->
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <ProgressBar Name="DownloadProgressBar" Classes="yt"
+                                 Minimum="0" Maximum="100" Value="0"/>
+                    <TextBlock Name="StatusText" Text="Ready"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="14"/>
+                    <TextBlock Name="HintText"
+                               Text="Saved files appear in the Files app under &quot;YT Downloader&quot;."
+                               Classes="label" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Native extraction • progressive MP4 up to ~720p • no ffmpeg on iOS"
+                       Classes="label"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="0,4,0,0"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

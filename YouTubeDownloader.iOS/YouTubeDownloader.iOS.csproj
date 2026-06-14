@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-ios</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
+    <RootNamespace>YouTubeDownloader.iOS</RootNamespace>
+    <AssemblyName>YouTubeDownloader.iOS</AssemblyName>
+
+    <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
+         runtime — that's what makes a sideloaded build run on a stock iPhone. -->
+    <MtouchLink Condition="'$(Configuration)' == 'Release'">SdkOnly</MtouchLink>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.iOS" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\YouTubeDownloader.Core\YouTubeDownloader.Core.csproj" />
+  </ItemGroup>
+
+</Project>

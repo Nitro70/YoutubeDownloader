@@ -1,8 +1,8 @@
 # YouTube Downloader
 
-A cross-platform (Windows + Linux) desktop GUI built on top of [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). The app does not implement any downloading logic itself — it's a visual front-end for yt-dlp, which does all the heavy lifting.
+A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **iPhone/iPad** it's a native app that does YouTube extraction in pure C# (iOS forbids launching yt-dlp/ffmpeg as subprocesses).
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![License](https://img.shields.io/badge/license-MIT-green)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -19,10 +19,31 @@ A cross-platform (Windows + Linux) desktop GUI built on top of [yt-dlp](https://
 
 ## Download
 
-Pre-built standalone binaries are available on the [Releases](../../releases) page:
+Pre-built binaries are on the [Releases](../../releases) page:
 
-- **Windows (x64):** `YouTubeDownloader.exe` — double-click to run.
-- **Linux (x64):** `YouTubeDownloader` — `chmod +x` it and run from your file manager or a terminal.
+- **Windows (x64):** `YouTubeDownloader-windows-x64.exe` — double-click to run.
+- **Linux (x64):** `YouTubeDownloader-linux-x64` — `chmod +x` it and run from your file manager or a terminal.
+- **iPhone / iPad:** `YouTubeDownloader-ios.ipa` — unsigned, for sideloading (see below).
+
+## iOS (sideloading)
+
+The iOS build is **not on the App Store** and is **unsigned** — you sideload it yourself, which signs it with your own Apple ID. Two common tools:
+
+- **[AltStore](https://altstore.io/)** — install AltServer on a PC/Mac, then install the IPA to your device over Wi-Fi. Free Apple ID works (app must be refreshed every 7 days).
+- **[Sideloadly](https://sideloadly.io/)** — plug the device into a PC/Mac, drag in the IPA, sign in with your Apple ID.
+
+### What the iOS app can and can't do
+
+iOS sandboxing forbids apps from launching external programs, so yt-dlp and ffmpeg **cannot run on the device**. Instead the iOS app extracts YouTube streams natively in C# (via [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)). Consequences:
+
+- ✅ Downloads **progressive MP4** (single-file video+audio, typically up to ~720p).
+- ✅ Downloads **audio-only M4A** (AAC).
+- ❌ No 1080p/4K on iOS — those require merging separate video+audio streams with ffmpeg, which isn't available on-device.
+- ❌ No channel/playlist bulk download on iOS (yet).
+
+Saved files land in the app's **Documents/Downloads** folder, accessible from the **Files** app under "YT Downloader", from where you can move them into Photos or share them.
+
+The **desktop** builds keep the full yt-dlp + ffmpeg engine with every quality option.
 
 ## Requirements (Building from Source)
 
@@ -60,6 +81,27 @@ On first run, the app extracts the embedded tools to:
 
 Videos save to a `videos` folder next to the binary (or wherever you choose in the UI).
 
+### Building the iOS IPA
+
+The IPA **can only be built on macOS** (it needs Xcode's iOS SDK — there is no Windows path). On a Mac with Xcode and the .NET iOS workload:
+
+```bash
+dotnet workload install ios
+./build-ios.sh
+```
+
+This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly.
+
+Alternatively, push a `v*` tag and the [GitHub Actions workflow](.github/workflows/release.yml) builds all three platforms (Windows + Linux on their runners, the iOS IPA on a macOS runner) and publishes them to a Release automatically.
+
+### Project layout
+
+| Project | Target | Purpose |
+|---------|--------|---------|
+| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI (yt-dlp + ffmpeg) |
+| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube extraction (used by iOS) |
+| `YouTubeDownloader.iOS` | `net8.0-ios` (Avalonia) | iOS app head, builds the IPA |
+
 ## Cookies (Optional)
 
 For age-restricted or private videos, place a `cookies.txt` file next to the binary. You can export cookies from your browser using extensions like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
@@ -70,7 +112,8 @@ This project is a GUI wrapper and would not exist without:
 
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — powers all video/audio downloading. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
 - **[FFmpeg](https://ffmpeg.org/)** — used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Windows builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds); Linux static builds from [johnvansickle.com](https://johnvansickle.com/ffmpeg/).
-- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework that makes the Linux build possible.
+- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework behind the Linux and iOS builds.
+- **[YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)** — pure-C# YouTube extraction that powers the iOS app (no subprocess needed). Licensed under [LGPL-3.0](https://github.com/Tyrrrz/YoutubeExplode/blob/master/License.txt).
 
 ## License
 

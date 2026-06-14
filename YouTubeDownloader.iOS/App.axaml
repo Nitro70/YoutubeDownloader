@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YouTubeDownloader.iOS.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://YouTubeDownloader.iOS/Styles/MobileTheme.axaml" />
+    </Application.Styles>
+
+</Application>
