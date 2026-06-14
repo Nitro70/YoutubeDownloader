@@ -139,18 +139,24 @@ jobs:
           -p:MtouchLink=SdkOnly
           -o ios-out
 
-      - name: Package unsigned IPA
+      - name: Collect unsigned IPA
         run: |
           set -e
-          APP=$(find ios-out -maxdepth 3 -name "*.app" -type d | head -1)
-          if [ -z "$APP" ]; then
-            echo "No .app bundle found under ios-out:"; find ios-out -maxdepth 3 -name "*.app" -o -name "*.ipa"; exit 1
+          # .NET iOS device publish usually emits an .ipa directly. If so, use
+          # it; otherwise fall back to zipping the .app bundle into a Payload.
+          IPA=$(find ios-out -maxdepth 2 -name "*.ipa" | head -1)
+          if [ -n "$IPA" ]; then
+            echo "Using produced IPA: $IPA"
+            cp "$IPA" YouTubeDownloader-ios.ipa
+          else
+            APP=$(find ios-out -maxdepth 3 -name "*.app" -type d | head -1)
+            if [ -z "$APP" ]; then
+              echo "No .app or .ipa found under ios-out:"; find ios-out -maxdepth 3; exit 1
+            fi
+            echo "Packaging app bundle: $APP"
+            rm -rf Payload; mkdir Payload; cp -R "$APP" Payload/
+            zip -r -y YouTubeDownloader-ios.ipa Payload >/dev/null
           fi
-          echo "Found app bundle: $APP"
-          rm -rf Payload
-          mkdir Payload
-          cp -R "$APP" Payload/
-          zip -r -y YouTubeDownloader-ios.ipa Payload >/dev/null
           ls -lh YouTubeDownloader-ios.ipa
 
       - uses: actions/upload-artifact@v4

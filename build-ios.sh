@@ -24,20 +24,28 @@ dotnet publish "$PROJ" \
     -p:MtouchLink=SdkOnly \
     -o ios-out
 
-APP="$(find ios-out -maxdepth 3 -name '*.app' -type d | head -1)"
-if [[ -z "$APP" ]]; then
-    echo "ERROR: no .app bundle was produced. Contents of ios-out:"
-    find ios-out -maxdepth 3
-    exit 1
-fi
-echo "App bundle: $APP"
+mkdir -p dist
+rm -f dist/YouTubeDownloader-ios.ipa
 
-echo "Packaging IPA..."
-rm -rf Payload dist/YouTubeDownloader-ios.ipa
-mkdir -p Payload dist
-cp -R "$APP" Payload/
-( zip -r -y dist/YouTubeDownloader-ios.ipa Payload >/dev/null )
-rm -rf Payload
+# .NET iOS device publish usually emits an .ipa directly; use it if present.
+IPA="$(find ios-out -maxdepth 2 -name '*.ipa' | head -1)"
+if [[ -n "$IPA" ]]; then
+    echo "Using produced IPA: $IPA"
+    cp "$IPA" dist/YouTubeDownloader-ios.ipa
+else
+    APP="$(find ios-out -maxdepth 3 -name '*.app' -type d | head -1)"
+    if [[ -z "$APP" ]]; then
+        echo "ERROR: no .app or .ipa was produced. Contents of ios-out:"
+        find ios-out -maxdepth 3
+        exit 1
+    fi
+    echo "Packaging app bundle: $APP"
+    rm -rf Payload
+    mkdir Payload
+    cp -R "$APP" Payload/
+    ( zip -r -y dist/YouTubeDownloader-ios.ipa Payload >/dev/null )
+    rm -rf Payload
+fi
 
 echo
 echo "Done: dist/YouTubeDownloader-ios.ipa"
