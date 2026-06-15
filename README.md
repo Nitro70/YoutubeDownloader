@@ -25,6 +25,50 @@ Pre-built binaries are on the [Releases](../../releases) page:
 - **Linux (x64):** `YouTubeDownloader-linux-x64` — `chmod +x` it and run from your file manager or a terminal.
 - **iPhone / iPad:** `YouTubeDownloader-ios.ipa` — unsigned, for sideloading (see below).
 
+## Command line (Windows & Linux)
+
+The desktop binary is a hybrid: run it with **no arguments** to open the GUI, or pass **any argument** to use it from the terminal. The Windows build attaches to the calling console automatically.
+
+```
+YouTubeDownloader.exe [options] <URL>
+
+ACTIONS
+  -d, --download        Download the video (default when a URL is given)
+  -i, --info            Print title, channel and duration, then exit
+  -h, --help, /?        Show help and exit
+  -v, --version         Show the version and exit
+
+FORMAT
+  -a, --audio, --mp3    Download audio only, converted to MP3
+  -q, --quality <Q>     best, 1080, 720, 480, 360  (default: best)
+
+OUTPUT
+  -n, --name <NAME>     Output filename without extension
+  -O, --dir <DIR>       Save folder (default: a 'videos' folder next to the exe)
+
+SOURCE
+  -u, --url <URL>       URL (or pass it positionally)
+  -c, --channel         Download the entire channel / playlist
+```
+
+Examples:
+
+```bash
+# Best-quality MP4
+YouTubeDownloader.exe https://youtu.be/VIDEO
+
+# 1080p with a custom name into a chosen folder
+YouTubeDownloader.exe -q 1080 -n "my clip" -O D:\Videos https://youtu.be/VIDEO
+
+# Audio only as MP3
+YouTubeDownloader.exe --mp3 https://youtu.be/VIDEO
+
+# Just the metadata
+YouTubeDownloader.exe -i https://youtu.be/VIDEO
+```
+
+On Linux it's the same flags: `./YouTubeDownloader-linux-x64 --mp3 https://youtu.be/VIDEO`. Windows-style `/flags` (e.g. `/help`, `/q 720`) also work. The CLI is **not** available on iOS.
+
 ## iOS (sideloading)
 
 The iOS build is **not on the App Store** and is **unsigned** — you sideload it yourself, which signs it with your own Apple ID. Two common tools:
