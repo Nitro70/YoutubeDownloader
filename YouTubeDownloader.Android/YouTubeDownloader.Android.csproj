@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Without this a net8.0-android project builds as a class library (a
+         .dll, no APK). Exe marks it as an Android application. -->
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-android</TargetFramework>
     <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
