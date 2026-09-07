@@ -220,10 +220,12 @@ jobs:
       - name: Collect APK
         run: |
           set -e
-          APK=$(find android-out -maxdepth 2 -name "*-Signed.apk" | head -1)
-          [ -n "$APK" ] || APK=$(find android-out -maxdepth 2 -name "*.apk" | head -1)
+          # The signed APK lands under bin/, not the publish -o dir, so search
+          # the whole workspace. Prefer the signed one; skip obj/ intermediates.
+          APK=$(find . -name "*-Signed.apk" -not -path "*/obj/*" | head -1)
+          [ -n "$APK" ] || APK=$(find . -name "*.apk" -not -path "*/obj/*" | head -1)
           if [ -z "$APK" ]; then
-            echo "No APK found under android-out:"; find android-out -maxdepth 2 -name "*.apk"; exit 1
+            echo "No APK found anywhere:"; find . -name "*.apk"; exit 1
           fi
           echo "Found APK: $APK"
           cp "$APK" YouTubeDownloader-android.apk

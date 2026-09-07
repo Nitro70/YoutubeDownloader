@@ -34,10 +34,11 @@ dotnet publish "$PROJ" \
     -o android-out
 
 mkdir -p dist
-APK="$(find android-out -maxdepth 2 -name '*-Signed.apk' | head -1)"
-[[ -n "$APK" ]] || APK="$(find android-out -maxdepth 2 -name '*.apk' | head -1)"
+# The signed APK lands under bin/, not the publish -o dir.
+APK="$(find . -name '*-Signed.apk' -not -path '*/obj/*' | head -1)"
+[[ -n "$APK" ]] || APK="$(find . -name '*.apk' -not -path '*/obj/*' | head -1)"
 if [[ -z "$APK" ]]; then
-    echo "ERROR: no APK produced. Contents of android-out:"; find android-out -maxdepth 2
+    echo "ERROR: no APK produced."; find . -name '*.apk'
     exit 1
 fi
 cp "$APK" dist/YouTubeDownloader-android.apk
