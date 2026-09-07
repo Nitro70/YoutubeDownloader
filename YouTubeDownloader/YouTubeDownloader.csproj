@@ -36,25 +36,20 @@
   <!-- Per-RID embedded tools. The Tools\ folder layout is:
          Tools\win-x64\   yt-dlp.exe, ffmpeg.exe, ffprobe.exe, *.dll
          Tools\linux-x64\ yt-dlp, ffmpeg, ffprobe
-       We embed only the binaries that match the publish RID so each
-       single-file build carries one platform's toolchain, not both. -->
+       We embed every file that matches the publish RID (a glob, so we don't
+       break when the ffmpeg build bumps a DLL's version-numbered name), and
+       only for the target platform so each single-file build carries one
+       toolchain. ToolsExtractor extracts whatever is embedded. -->
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == ''">
-    <EmbeddedResource Include="Tools\win-x64\yt-dlp.exe"   LogicalName="YouTubeDownloader.Tools.yt-dlp.exe" />
-    <EmbeddedResource Include="Tools\win-x64\ffmpeg.exe"   LogicalName="YouTubeDownloader.Tools.ffmpeg.exe" />
-    <EmbeddedResource Include="Tools\win-x64\ffprobe.exe"  LogicalName="YouTubeDownloader.Tools.ffprobe.exe" />
-    <EmbeddedResource Include="Tools\win-x64\avcodec-62.dll"    LogicalName="YouTubeDownloader.Tools.avcodec-62.dll" />
-    <EmbeddedResource Include="Tools\win-x64\avdevice-62.dll"   LogicalName="YouTubeDownloader.Tools.avdevice-62.dll" />
-    <EmbeddedResource Include="Tools\win-x64\avfilter-11.dll"   LogicalName="YouTubeDownloader.Tools.avfilter-11.dll" />
-    <EmbeddedResource Include="Tools\win-x64\avformat-62.dll"   LogicalName="YouTubeDownloader.Tools.avformat-62.dll" />
-    <EmbeddedResource Include="Tools\win-x64\avutil-60.dll"     LogicalName="YouTubeDownloader.Tools.avutil-60.dll" />
-    <EmbeddedResource Include="Tools\win-x64\swresample-6.dll"  LogicalName="YouTubeDownloader.Tools.swresample-6.dll" />
-    <EmbeddedResource Include="Tools\win-x64\swscale-9.dll"     LogicalName="YouTubeDownloader.Tools.swscale-9.dll" />
+    <EmbeddedResource Include="Tools\win-x64\*">
+      <LogicalName>YouTubeDownloader.Tools.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
-    <EmbeddedResource Include="Tools\linux-x64\yt-dlp"   LogicalName="YouTubeDownloader.Tools.yt-dlp" />
-    <EmbeddedResource Include="Tools\linux-x64\ffmpeg"   LogicalName="YouTubeDownloader.Tools.ffmpeg" />
-    <EmbeddedResource Include="Tools\linux-x64\ffprobe"  LogicalName="YouTubeDownloader.Tools.ffprobe" />
+    <EmbeddedResource Include="Tools\linux-x64\*">
+      <LogicalName>YouTubeDownloader.Tools.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

@@ -1,34 +1,12 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace YouTubeDownloader;
 
 public static class ToolsExtractor
 {
-    private static readonly string[] WindowsToolFiles = new[]
-    {
-        "yt-dlp.exe",
-        "ffmpeg.exe",
-        "ffprobe.exe",
-        "avcodec-62.dll",
-        "avdevice-62.dll",
-        "avfilter-11.dll",
-        "avformat-62.dll",
-        "avutil-60.dll",
-        "swresample-6.dll",
-        "swscale-9.dll"
-    };
-
-    private static readonly string[] LinuxToolFiles = new[]
-    {
-        "yt-dlp",
-        "ffmpeg",
-        "ffprobe"
-    };
-
-    private static readonly string[] LinuxExecutables = new[] { "yt-dlp", "ffmpeg", "ffprobe" };
+    private const string ResourcePrefix = "YouTubeDownloader.Tools.";
 
     public static string ToolsDirectory { get; private set; } = string.Empty;
 
@@ -37,64 +15,62 @@ public static class ToolsExtractor
 
     public static string FfmpegDirectory => ToolsDirectory;
 
-    private static string[] ToolFiles =>
-        OperatingSystem.IsWindows() ? WindowsToolFiles : LinuxToolFiles;
-
     public static void ExtractTools()
     {
         ToolsDirectory = Path.Combine(GetDataDir(), "YouTubeDownloader", "tools");
         Directory.CreateDirectory(ToolsDirectory);
 
         var assembly = Assembly.GetExecutingAssembly();
-        const string resourcePrefix = "YouTubeDownloader.Tools.";
 
+        // Extract whatever tool resources are embedded — names are not
+        // hardcoded, so a new ffmpeg build with different DLL version numbers
+        // still extracts correctly.
         string appVersion = assembly.GetName().Version?.ToString() ?? "0.0.0.0";
         string stampPath = Path.Combine(ToolsDirectory, "tools.version");
         string? existingStamp = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : null;
         bool versionChanged = existingStamp != appVersion;
 
-        bool ytDlpName(string name) =>
-            string.Equals(name, "yt-dlp.exe", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(name, "yt-dlp", StringComparison.OrdinalIgnoreCase);
-
-        foreach (string toolFile in ToolFiles)
+        foreach (string resource in assembly.GetManifestResourceNames())
         {
-            string destPath = Path.Combine(ToolsDirectory, toolFile);
-            bool isYtDlp = ytDlpName(toolFile);
+            if (!resource.StartsWith(ResourcePrefix, StringComparison.Ordinal))
+                continue;
 
-            // Re-extract if missing, or if version changed (except yt-dlp, whose self-update we preserve).
+            string fileName = resource.Substring(ResourcePrefix.Length);
+            string destPath = Path.Combine(ToolsDirectory, fileName);
+            bool isYtDlp = IsYtDlp(fileName);
+
+            // Re-extract if missing, or if the app version changed (except
+            // yt-dlp, whose in-place self-update we want to preserve).
             bool shouldExtract = !File.Exists(destPath) || (versionChanged && !isYtDlp);
             if (shouldExtract)
-            {
-                ExtractResource(assembly, resourcePrefix + toolFile, destPath);
-            }
+                ExtractResource(assembly, resource, destPath);
 
-            if (!OperatingSystem.IsWindows() && Array.IndexOf(LinuxExecutables, toolFile) >= 0)
-            {
+            if (!OperatingSystem.IsWindows() && IsUnixExecutable(fileName))
                 TrySetExecutable(destPath);
-            }
         }
 
         File.WriteAllText(stampPath, appVersion);
     }
 
-    private static string GetDataDir()
-    {
-        // LocalApplicationData maps to:
-        //   Windows: %LOCALAPPDATA%
-        //   Linux:   $XDG_DATA_HOME or ~/.local/share
-        //   macOS:   ~/.local/share (mono behavior); on net Core macOS it returns ~/.local/share too
-        return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-    }
+    private static bool IsYtDlp(string fileName) =>
+        string.Equals(fileName, "yt-dlp.exe", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(fileName, "yt-dlp", StringComparison.OrdinalIgnoreCase);
+
+    // On Unix the tool binaries have no file extension; mark them executable.
+    private static bool IsUnixExecutable(string fileName) =>
+        !Path.HasExtension(fileName);
+
+    private static string GetDataDir() =>
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
     private static void ExtractResource(Assembly assembly, string resourceName, string destPath)
     {
         using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
-        {
             throw new Exception($"Resource not found: {resourceName}");
-        }
 
+        // Write to a temp file then move into place so a failure mid-copy (or a
+        // briefly-locked file) can't leave a corrupt tool behind.
         string tempPath = destPath + ".tmp";
         using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
         {
@@ -102,9 +78,7 @@ public static class ToolsExtractor
         }
 
         if (File.Exists(destPath))
-        {
             File.Delete(destPath);
-        }
         File.Move(tempPath, destPath);
     }
 
@@ -113,7 +87,6 @@ public static class ToolsExtractor
         if (OperatingSystem.IsWindows()) return;
         try
         {
-            // .NET 7+ exposes File.SetUnixFileMode on Unix.
             File.SetUnixFileMode(path,
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
                 UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
@@ -121,7 +94,6 @@ public static class ToolsExtractor
         }
         catch
         {
-            // Fall back to chmod if SetUnixFileMode is unavailable for some reason.
             try
             {
                 var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -137,13 +109,6 @@ public static class ToolsExtractor
         }
     }
 
-    public static bool ToolsExist()
-    {
-        if (string.IsNullOrEmpty(ToolsDirectory)) return false;
-        foreach (string toolFile in ToolFiles)
-        {
-            if (!File.Exists(Path.Combine(ToolsDirectory, toolFile))) return false;
-        }
-        return true;
-    }
+    public static bool ToolsExist() =>
+        !string.IsNullOrEmpty(ToolsDirectory) && File.Exists(YtDlpPath);
 }

@@ -1,10 +1,11 @@
-using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
 namespace YouTubeDownloader.Droid;
 
-public partial class App : Application
+// Base type is fully qualified: the Android SDK's implicit usings pull in
+// Android.App.Application, which would otherwise be ambiguous with Avalonia's.
+public partial class App : Avalonia.Application
 {
     public override void Initialize()
     {
