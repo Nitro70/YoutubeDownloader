@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- Build under the .NET 8 SDK (see CI's global.json). A newer SDK flags
+         net8.0-android as EOL; this keeps that a warning rather than an error. -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+
+    <!-- Assembly name gives the avares:// URIs their prefix; the CLR namespace
+         is deliberately ".Droid" so unqualified `Android.*` platform types
+         don't collide with a namespace ending in ".Android". -->
+    <AssemblyName>YouTubeDownloader.Android</AssemblyName>
+    <RootNamespace>YouTubeDownloader.Droid</RootNamespace>
+
+    <ApplicationId>com.nitro70.youtubedownloader</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>3.2.0</ApplicationDisplayVersion>
+
+    <!-- Emit an installable .apk (Release would otherwise produce an .aab). -->
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Android" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\YouTubeDownloader.Core\YouTubeDownloader.Core.csproj" />
+  </ItemGroup>
+
+</Project>

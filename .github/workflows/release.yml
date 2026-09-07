@@ -164,9 +164,79 @@ jobs:
           name: ios
           path: YouTubeDownloader-ios.ipa
 
+  # ----------------------------------------------------------------- Android
+  # Self-signed APK for sideloading. Enable "install unknown apps" on the
+  # device to install it. Uses the same native Core (YoutubeExplode) as iOS.
+  android:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # The runner's default SDK mis-resolves net8.0-android's platform
+      # version; pin the .NET 8 SDK so its Android workload builds it correctly.
+      - name: Pin .NET 8 SDK
+        run: |
+          cat > global.json <<'JSON'
+          {
+            "sdk": {
+              "version": "8.0.0",
+              "rollForward": "latestFeature"
+            }
+          }
+          JSON
+          dotnet --version
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Ensure Android API 34 platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-34" "build-tools;34.0.0" >/dev/null 2>&1 || true
+
+      - name: Generate a self-signed keystore
+        run: |
+          keytool -genkeypair -v -keystore app.keystore -alias ytd \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass androidsideload -keypass androidsideload \
+            -dname "CN=YouTube Downloader, O=Sideload, C=US"
+
+      - name: Build signed APK
+        run: >
+          dotnet publish YouTubeDownloader.Android/YouTubeDownloader.Android.csproj
+          -c Release -f net8.0-android
+          -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore=$GITHUB_WORKSPACE/app.keystore
+          -p:AndroidSigningKeyAlias=ytd
+          -p:AndroidSigningKeyPass=androidsideload
+          -p:AndroidSigningStorePass=androidsideload
+          -o android-out
+
+      - name: Collect APK
+        run: |
+          set -e
+          APK=$(find android-out -maxdepth 2 -name "*-Signed.apk" | head -1)
+          [ -n "$APK" ] || APK=$(find android-out -maxdepth 2 -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "No APK found under android-out:"; find android-out -maxdepth 2 -name "*.apk"; exit 1
+          fi
+          echo "Found APK: $APK"
+          cp "$APK" YouTubeDownloader-android.apk
+          ls -lh YouTubeDownloader-android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: YouTubeDownloader-android.apk
+
   # ----------------------------------------------------------------- Release
   release:
-    needs: [windows, linux, ios]
+    needs: [windows, linux, ios, android]
     if: ${{ always() && startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
@@ -187,16 +257,17 @@ jobs:
 
             | Platform | File | How to run |
             |----------|------|------------|
-            | **Windows (x64)** | `YouTubeDownloader-windows-x64.exe` | Double-click. |
-            | **Linux (x64)** | `YouTubeDownloader-linux-x64` | `chmod +x` then run. |
+            | **Windows (x64)** | `YouTubeDownloader-windows-x64.exe` | Double-click (GUI) or run with args (CLI). |
+            | **Linux (x64)** | `YouTubeDownloader-linux-x64` | `chmod +x` then run (GUI or CLI). |
+            | **Android** | `YouTubeDownloader-android.apk` | Self-signed — enable "install unknown apps", then open the APK. |
             | **iPhone / iPad** | `YouTubeDownloader-ios.ipa` | Unsigned — sideload with AltStore or Sideloadly (see README). |
 
-            ### iOS notes
-            The iOS build does YouTube extraction natively in C# (no yt-dlp /
-            ffmpeg subprocess, which iOS forbids). It downloads **progressive
-            MP4** (single-file video+audio, up to ~720p) and **audio-only M4A**.
-            Higher resolutions that require merging separate streams are not
-            available on iOS in this version.
+            ### Mobile notes (Android & iOS)
+            The mobile builds do YouTube extraction natively in C# (no yt-dlp /
+            ffmpeg subprocess, which iOS forbids and Android can't bundle easily).
+            They download **progressive MP4** (single-file video+audio, up to
+            ~720p) and **audio-only M4A**. Higher resolutions that require merging
+            separate streams aren't available on mobile in this version.
 
             Desktop (Windows/Linux) keeps the full yt-dlp + ffmpeg engine with
-            all quality options.
+            all quality options, plus a command-line mode.

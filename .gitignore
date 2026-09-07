@@ -5,6 +5,10 @@ dist/
 ios-out/
 Payload/
 *.ipa
+android-out/
+*.apk
+*.aab
+*.keystore
 
 # Visual Studio
 .vs/

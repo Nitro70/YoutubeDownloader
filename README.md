@@ -1,8 +1,8 @@
 # YouTube Downloader
 
-A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **iPhone/iPad** it's a native app that does YouTube extraction in pure C# (iOS forbids launching yt-dlp/ffmpeg as subprocesses).
+A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (and CLI) wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **Android and iPhone/iPad** it's a native app that does YouTube extraction in pure C# (mobile OSes can't run yt-dlp/ffmpeg as subprocesses).
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![Android](https://img.shields.io/badge/Android-sideload-green) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -23,6 +23,7 @@ Pre-built binaries are on the [Releases](../../releases) page:
 
 - **Windows (x64):** `YouTubeDownloader-windows-x64.exe` — double-click to run.
 - **Linux (x64):** `YouTubeDownloader-linux-x64` — `chmod +x` it and run from your file manager or a terminal.
+- **Android:** `YouTubeDownloader-android.apk` — self-signed, for sideloading (see below).
 - **iPhone / iPad:** `YouTubeDownloader-ios.ipa` — unsigned, for sideloading (see below).
 
 ## Command line (Windows & Linux)
@@ -68,6 +69,18 @@ YouTubeDownloader.exe -i https://youtu.be/VIDEO
 ```
 
 On Linux it's the same flags: `./YouTubeDownloader-linux-x64 --mp3 https://youtu.be/VIDEO`. Windows-style `/flags` (e.g. `/help`, `/q 720`) also work. The CLI is **not** available on iOS.
+
+## Android (sideloading)
+
+The Android build is **not on the Play Store**. It's a self-signed APK you install directly:
+
+1. Download `YouTubeDownloader-android.apk` to the phone.
+2. Open it; Android will prompt to allow installing from this source — enable **"install unknown apps"** for your browser/file manager.
+3. Install and open.
+
+Same native engine as iOS (YoutubeExplode, pure C#): **progressive MP4** up to ~720p and **audio-only M4A**. Saved files land in `Android/data/com.nitro70.youtubedownloader/files/Downloads`, reachable from a file manager.
+
+> The APK is signed with a throwaway key generated at build time, so a new release may not install *over* an older one — uninstall the old version first if Android refuses the update.
 
 ## iOS (sideloading)
 
@@ -136,15 +149,29 @@ dotnet workload install ios
 
 This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly.
 
-Alternatively, push a `v*` tag and the [GitHub Actions workflow](.github/workflows/release.yml) builds all three platforms (Windows + Linux on their runners, the iOS IPA on a macOS runner) and publishes them to a Release automatically.
+### Building the Android APK
+
+Builds on any OS with the **.NET 8 SDK**, the Android workload, and an Android SDK (API 34 + build-tools 34) + JDK:
+
+```bash
+dotnet workload install android
+./build-android.sh
+```
+
+This produces a self-signed `dist/YouTubeDownloader-android.apk`. (Use the .NET 8 SDK specifically — a newer SDK currently mis-resolves the `net8.0-android` platform version.)
+
+### Everything at once, via CI
+
+Push a `v*` tag and the [GitHub Actions workflow](.github/workflows/release.yml) builds **all four** platforms — Windows + Linux + the Android APK on their runners, the iOS IPA on a macOS runner — and publishes them to a Release automatically.
 
 ### Project layout
 
 | Project | Target | Purpose |
 |---------|--------|---------|
-| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI (yt-dlp + ffmpeg) |
-| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube extraction (used by iOS) |
+| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg) |
+| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube extraction (used by mobile) |
 | `YouTubeDownloader.iOS` | `net8.0-ios` (Avalonia) | iOS app head, builds the IPA |
+| `YouTubeDownloader.Android` | `net8.0-android` (Avalonia) | Android app head, builds the APK |
 
 ## Cookies (Optional)
 
@@ -156,8 +183,8 @@ This project is a GUI wrapper and would not exist without:
 
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — powers all video/audio downloading. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
 - **[FFmpeg](https://ffmpeg.org/)** — used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Windows builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds); Linux static builds from [johnvansickle.com](https://johnvansickle.com/ffmpeg/).
-- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework behind the Linux and iOS builds.
-- **[YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)** — pure-C# YouTube extraction that powers the iOS app (no subprocess needed). Licensed under [LGPL-3.0](https://github.com/Tyrrrz/YoutubeExplode/blob/master/License.txt).
+- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework behind the Linux, Android and iOS builds.
+- **[YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)** — pure-C# YouTube extraction that powers the Android and iOS apps (no subprocess needed). Licensed under [LGPL-3.0](https://github.com/Tyrrrz/YoutubeExplode/blob/master/License.txt).
 
 ## License
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AvaloniaMainActivity is an AndroidX AppCompat activity, so the launch
+         theme must derive from Theme.AppCompat. NoActionBar + dark background
+         avoids a flash of light chrome before Avalonia paints. -->
+    <style name="MyTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>
