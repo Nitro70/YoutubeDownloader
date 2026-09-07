@@ -23,19 +23,19 @@ if [[ ! -f "$KS" ]]; then
 fi
 
 echo "Building signed APK..."
-dotnet publish "$PROJ" \
+dotnet build "$PROJ" \
     -c Release -f net8.0-android \
     -p:AndroidPackageFormat=apk \
     -p:AndroidKeyStore=true \
     -p:AndroidSigningKeyStore="$PWD/$KS" \
     -p:AndroidSigningKeyAlias=ytd \
     -p:AndroidSigningKeyPass=androidsideload \
-    -p:AndroidSigningStorePass=androidsideload \
-    -o android-out
+    -p:AndroidSigningStorePass=androidsideload
 
 mkdir -p dist
-# The signed APK lands under bin/, not the publish -o dir.
+# The signed APK lands under bin/ (SignAndroidPackage target).
 APK="$(find . -name '*-Signed.apk' -not -path '*/obj/*' | head -1)"
+[[ -n "$APK" ]] || APK="$(find . -name '*-Signed.apk' | head -1)"
 [[ -n "$APK" ]] || APK="$(find . -name '*.apk' -not -path '*/obj/*' | head -1)"
 if [[ -z "$APK" ]]; then
     echo "ERROR: no APK produced."; find . -name '*.apk'

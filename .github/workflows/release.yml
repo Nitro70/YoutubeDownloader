@@ -205,9 +205,11 @@ jobs:
             -storepass androidsideload -keypass androidsideload \
             -dname "CN=YouTube Downloader, O=Sideload, C=US"
 
+      # `dotnet build` (not publish) runs the SignAndroidPackage target that
+      # emits <pkg>-Signed.apk under bin/.
       - name: Build signed APK
         run: >
-          dotnet publish YouTubeDownloader.Android/YouTubeDownloader.Android.csproj
+          dotnet build YouTubeDownloader.Android/YouTubeDownloader.Android.csproj
           -c Release -f net8.0-android
           -p:AndroidPackageFormat=apk
           -p:AndroidKeyStore=true
@@ -215,17 +217,17 @@ jobs:
           -p:AndroidSigningKeyAlias=ytd
           -p:AndroidSigningKeyPass=androidsideload
           -p:AndroidSigningStorePass=androidsideload
-          -o android-out
 
       - name: Collect APK
         run: |
           set -e
-          # The signed APK lands under bin/, not the publish -o dir, so search
-          # the whole workspace. Prefer the signed one; skip obj/ intermediates.
+          echo "apk/aab artifacts produced:"
+          find . \( -name "*.apk" -o -name "*.aab" \) | sort || true
           APK=$(find . -name "*-Signed.apk" -not -path "*/obj/*" | head -1)
+          [ -n "$APK" ] || APK=$(find . -name "*-Signed.apk" | head -1)
           [ -n "$APK" ] || APK=$(find . -name "*.apk" -not -path "*/obj/*" | head -1)
           if [ -z "$APK" ]; then
-            echo "No APK found anywhere:"; find . -name "*.apk"; exit 1
+            echo "No APK found."; exit 1
           fi
           echo "Found APK: $APK"
           cp "$APK" YouTubeDownloader-android.apk
