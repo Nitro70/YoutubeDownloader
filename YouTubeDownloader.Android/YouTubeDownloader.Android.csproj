@@ -25,6 +25,12 @@
 
     <!-- Emit an installable .apk (Release would otherwise produce an .aab). -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+
+    <!-- Avalonia + the IL trimmer/AOT don't play nicely (ILLink IL1032 in
+         Release). Disable both — a slightly larger APK is fine for sideloading. -->
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>
