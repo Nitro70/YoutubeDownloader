@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with Xcode
-# and the .NET iOS workload installed.
+# Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with Xcode 16
+# (the .NET 8 iOS workload targets the iOS 18 SDK) and the .NET iOS workload installed.
 #
 #   dotnet workload install ios
 #   ./build-ios.sh

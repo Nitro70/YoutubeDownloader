@@ -102,7 +102,7 @@ jobs:
   # Unsigned IPA. Sideloaders (AltStore / Sideloadly) re-sign with the
   # installer's own Apple ID, so we deliberately skip code signing here.
   ios:
-    runs-on: macos-14
+    runs-on: macos-15
     # Best-effort: if the iOS build needs a tweak, Windows + Linux still ship.
     continue-on-error: true
     steps:
@@ -114,7 +114,7 @@ jobs:
       # The macOS runner defaults to a newer SDK whose iOS workload ships
       # net9/net10 packs and flags net8.0-ios as EOL. Pin to the .NET 8 SDK
       # so its iOS workload (net8 / iOS 17 SDK) matches Avalonia.iOS 11.2.3
-      # (net8.0-ios17.0) and the runner's Xcode 15.
+      # (net8.0-ios17.0).
       - name: Pin .NET 8 SDK
         run: |
           cat > global.json <<'JSON'
@@ -129,6 +129,15 @@ jobs:
 
       - name: Install iOS workload
         run: dotnet workload install ios
+
+      # The .NET 8 iOS workload is built against the iOS 18 SDK, so an untrimmed
+      # build needs Xcode 16. Pick the newest 16.x on the runner explicitly.
+      - name: Select Xcode 16
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
 
       - name: Build app bundle (unsigned, device arm64, full AOT)
         run: >
