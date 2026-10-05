@@ -221,4 +221,24 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
 
+    <!-- Search results list -->
+    <Style Selector="ListBox.results">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.results ListBoxItem">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="ListBox.results ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+    </Style>
+    <Style Selector="ListBox.results ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+    </Style>
+    <Style Selector="ListBox.results ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}"/>
+    </Style>
+
 </Styles>

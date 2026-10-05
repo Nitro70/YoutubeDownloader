@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="using:YouTubeDownloader.Core"
         x:Class="YouTubeDownloader.MainWindow"
         Title="YouTube Downloader"
         Width="950" Height="750"
@@ -27,7 +28,7 @@
                 <!-- URL card -->
                 <Border Classes="card">
                     <StackPanel>
-                        <TextBlock Text="Video URL" Classes="section"/>
+                        <TextBlock Text="Video URL or Search" Classes="section"/>
 
                         <Grid ColumnDefinitions="*,Auto,Auto">
                             <Panel Grid.Column="0">
@@ -35,7 +36,7 @@
                                          KeyDown="UrlTextBox_KeyDown"
                                          TextChanged="UrlTextBox_TextChanged"/>
                                 <TextBlock Name="UrlPlaceholder"
-                                           Text="Paste a YouTube URL here, then press Enter"
+                                           Text="Paste a link or type search words, then press Enter"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"
                                            Margin="16,0,0,0"
@@ -53,13 +54,50 @@
                                     Click="FetchInfoButton_Click"/>
                         </Grid>
 
+                        <!-- Search results (shown when the box holds search words) -->
+                        <Border Name="SearchResultsPanel"
+                                Background="{DynamicResource BgDarkBrush}"
+                                CornerRadius="8"
+                                Margin="0,15,0,0"
+                                Padding="10"
+                                IsVisible="False">
+                            <StackPanel>
+                                <Grid ColumnDefinitions="*,Auto" Margin="6,0,0,8">
+                                    <TextBlock Name="SearchStatusText" Grid.Column="0"
+                                               Classes="label" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Button Name="CloseResultsButton" Grid.Column="1"
+                                            Content="✕" Classes="yt"
+                                            Padding="10,4" FontSize="12"
+                                            ToolTip.Tip="Hide results"
+                                            Click="CloseResultsButton_Click"/>
+                                </Grid>
+                                <ListBox Name="SearchResultsList" Classes="results"
+                                         MaxHeight="300"
+                                         SelectionChanged="SearchResultsList_SelectionChanged">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="core:SearchResult">
+                                            <StackPanel Margin="4,2">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           FontSize="14" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Details}" Classes="label"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </Border>
+
                         <Border Name="VideoInfoPanel"
                                 Background="{DynamicResource BgDarkBrush}"
                                 CornerRadius="8"
                                 Margin="0,15,0,0"
                                 Padding="15"
                                 IsVisible="False">
-                            <Grid ColumnDefinitions="Auto,*">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
                                 <Image Name="ThumbnailImage" Grid.Column="0"
                                        Width="160" Height="90"
                                        Stretch="UniformToFill"
@@ -72,6 +110,12 @@
                                     <TextBlock Name="ChannelText" Classes="label" Margin="0,5,0,0"/>
                                     <TextBlock Name="DurationText" Classes="label" Margin="0,3,0,0"/>
                                 </StackPanel>
+                                <Button Name="CopyLinkButton" Grid.Column="2"
+                                        Content="🔗 Copy link" Classes="yt"
+                                        VerticalAlignment="Center"
+                                        Padding="12,6" FontSize="12"
+                                        Margin="10,0,0,0"
+                                        Click="CopyLinkButton_Click"/>
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -205,7 +249,7 @@
 
         <!-- Footer -->
         <Border Grid.Row="2" Background="{DynamicResource BgSecondaryBrush}">
-            <TextBlock Text="Powered by yt-dlp &amp; FFmpeg  •  YouTube Downloader v3.1"
+            <TextBlock Text="Powered by yt-dlp &amp; FFmpeg  •  YouTube Downloader v3.3"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        FontSize="11"
                        HorizontalAlignment="Center"

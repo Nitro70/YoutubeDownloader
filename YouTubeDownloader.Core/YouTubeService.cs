@@ -9,7 +9,7 @@ namespace YouTubeDownloader.Core;
 /// yt-dlp/ffmpeg as subprocesses is impossible. Backed by YoutubeExplode.
 ///
 /// Limitations vs. the desktop yt-dlp engine:
-///   * Only progressive (muxed) MP4 streams are offered for video — these
+///   * Only progressive (muxed) MP4 streams are offered for video: these
 ///     carry audio+video in one file, so no ffmpeg muxing is required. That
 ///     caps quality at whatever progressive itag YouTube serves (commonly
 ///     360p or 720p).
@@ -33,6 +33,28 @@ public sealed class YouTubeService
             video.Author.ChannelTitle,
             video.Duration,
             thumb);
+    }
+
+    /// <summary>
+    /// Searches YouTube and returns up to <paramref name="maxResults"/> plain videos, best
+    /// match first. Channels, playlists and shelves are left out, as are ads.
+    /// </summary>
+    public async Task<IReadOnlyList<SearchResult>> SearchAsync(
+        string query, int maxResults = 10, CancellationToken ct = default)
+    {
+        var results = new List<SearchResult>();
+        if (string.IsNullOrWhiteSpace(query) || maxResults <= 0) return results;
+
+        await foreach (var v in _youtube.Search.GetVideosAsync(query.Trim(), ct))
+        {
+            string? thumb = v.Thumbnails.Count > 0
+                ? v.Thumbnails.GetWithHighestResolution().Url
+                : null;
+            results.Add(new SearchResult(
+                v.Id.Value, v.Url, v.Title, v.Author.ChannelTitle, v.Duration, thumb));
+            if (results.Count >= maxResults) break;
+        }
+        return results;
     }
 
     /// <summary>
@@ -62,7 +84,10 @@ public sealed class YouTubeService
             ? Sanitize(video.Title)
             : Sanitize(customName);
 
-        string ext = stream.Container.Name;
+        // An audio-only MP4 is an M4A; name it that way so players treat it as audio.
+        string ext = kind == DownloadKind.Audio && stream.Container == Container.Mp4
+            ? "m4a"
+            : stream.Container.Name;
         string path = Path.Combine(outputDirectory, $"{baseName}.{ext}");
         path = MakeUnique(path);
 

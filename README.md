@@ -1,13 +1,14 @@
 # YouTube Downloader
 
-A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (and CLI) wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **Android and iPhone/iPad** it's a native app that does YouTube extraction in pure C# (mobile OSes can't run yt-dlp/ffmpeg as subprocesses).
+A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (and CLI) wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **Android and iPhone/iPad** it's a native app that does YouTube extraction in pure C# (mobile OSes can't run yt-dlp/ffmpeg as subprocesses). Every version can **search YouTube**, so you don't need a link.
 
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![Android](https://img.shields.io/badge/Android-sideload-green) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
 - YouTube-themed dark UI built with [Avalonia](https://avaloniaui.net/)
-- Paste a URL and fetch video info (title, channel, duration, thumbnail)
+- **Search YouTube by typing words** in the link box: pick from the top 10 results, or hit Download to grab the first one
+- Paste a URL and fetch video info (title, channel, duration, thumbnail), with a **Copy link** button
 - Download as **MP4** video with quality selection (Best, 1080p, 720p, 480p, 360p)
 - Download as **MP3** audio-only extraction
 - Download entire channels/playlists
@@ -15,16 +16,26 @@ A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (
 - Live progress bar showing size, speed, and ETA
 - Auto-updates yt-dlp on startup
 - Supports `cookies.txt` for age-restricted videos
-- **Standalone portable binaries** — the single executable bundles yt-dlp, FFmpeg, and the .NET runtime. No installation or external dependencies required to run it.
+- **Standalone portable binaries:** the single executable bundles yt-dlp, FFmpeg, and the .NET runtime. Nothing to install.
 
 ## Download
 
 Pre-built binaries are on the [Releases](../../releases) page:
 
-- **Windows (x64):** `YouTubeDownloader-windows-x64.exe` — double-click to run.
-- **Linux (x64):** `YouTubeDownloader-linux-x64` — `chmod +x` it and run from your file manager or a terminal.
-- **Android:** `YouTubeDownloader-android.apk` — self-signed, for sideloading (see below).
-- **iPhone / iPad:** `YouTubeDownloader-ios.ipa` — unsigned, for sideloading (see below).
+- **Windows (x64):** `YouTubeDownloader-windows-x64.exe`. Double-click to run.
+- **Linux (x64):** `YouTubeDownloader-linux-x64`. `chmod +x` it and run it from your file manager or a terminal.
+- **Android:** `YouTubeDownloader-android.apk`. Self-signed, for sideloading (see below).
+- **iPhone / iPad:** `YouTubeDownloader-ios.ipa`. Unsigned, for sideloading (see below).
+
+## Searching
+
+Type words instead of a link and the box turns into a search:
+
+- **Press Enter** (or the **Search** button) to list the top 10 videos. Click or tap one to fill in its link and load its info.
+- **Press Download** with words still in the box to download the first result straight away.
+- Anything that looks like a link (`https://...`, or a bare `youtube.com/...` / `youtu.be/...`) is treated as a link, everything else as search words.
+
+Results are plain videos only: channels, playlists, shelves and ads are skipped.
 
 ## Command line (Windows & Linux)
 
@@ -32,10 +43,14 @@ The desktop binary is a hybrid: run it with **no arguments** to open the GUI, or
 
 ```
 YouTubeDownloader.exe [options] <URL>
+YouTubeDownloader.exe [options] <search words>
 
 ACTIONS
   -d, --download        Download the video (default when a URL is given)
   -i, --info            Print title, channel and duration, then exit
+  -s, --search          Print the link of the first video found for the
+                        search words (Windows: also copied to the clipboard)
+  -r, --results <N>     With --search, list the top N results (1-50)
   -h, --help, /?        Show help and exit
   -v, --version         Show the version and exit
 
@@ -49,7 +64,11 @@ OUTPUT
 
 SOURCE
   -u, --url <URL>       URL (or pass it positionally)
+  <search words>        Anything that isn't a link is a YouTube search;
+                        the first video found is used
   -c, --channel         Download the entire channel / playlist
+  --                    Everything after this is search words, even if it
+                        starts with - or /
 ```
 
 Examples:
@@ -66,39 +85,48 @@ YouTubeDownloader.exe --mp3 https://youtu.be/VIDEO
 
 # Just the metadata
 YouTubeDownloader.exe -i https://youtu.be/VIDEO
+
+# Find a video: prints the first result's link and copies it
+YouTubeDownloader.exe -s never gonna give you up
+
+# List the top 5 results with titles
+YouTubeDownloader.exe -s -r 5 lofi hip hop
+
+# Search and download the first result as MP3, no link needed
+YouTubeDownloader.exe --mp3 never gonna give you up
 ```
 
-On Linux it's the same flags: `./YouTubeDownloader-linux-x64 --mp3 https://youtu.be/VIDEO`. Windows-style `/flags` (e.g. `/help`, `/q 720`) also work. The CLI is **not** available on iOS.
+On Linux it's the same flags: `./YouTubeDownloader-linux-x64 --mp3 never gonna give you up`. Windows-style `/flags` (e.g. `/help`, `/q 720`) also work. The CLI is **not** available on the phone apps.
 
 ## Android (sideloading)
 
 The Android build is **not on the Play Store**. It's a self-signed APK you install directly:
 
 1. Download `YouTubeDownloader-android.apk` to the phone.
-2. Open it; Android will prompt to allow installing from this source — enable **"install unknown apps"** for your browser/file manager.
+2. Open it. Android will ask you to allow installing from this source: enable **"install unknown apps"** for your browser or file manager.
 3. Install and open.
 
-Same native engine as iOS (YoutubeExplode, pure C#): **progressive MP4** up to ~720p and **audio-only M4A**. Saved files land in `Android/data/com.nitro70.youtubedownloader/files/Downloads`, reachable from a file manager.
+Saved files land in `Android/data/com.nitro70.youtubedownloader/files/Downloads`, reachable from a file manager.
 
-> The APK is signed with a throwaway key generated at build time, so a new release may not install *over* an older one — uninstall the old version first if Android refuses the update.
+> The APK is signed with a throwaway key generated at build time, so a new release may not install *over* an older one. Uninstall the old version first if Android refuses the update.
 
 ## iOS (sideloading)
 
-The iOS build is **not on the App Store** and is **unsigned** — you sideload it yourself, which signs it with your own Apple ID. Two common tools:
+The iOS build is **not on the App Store** and is **unsigned**: you sideload it yourself, which signs it with your own Apple ID. Two common tools:
 
-- **[AltStore](https://altstore.io/)** — install AltServer on a PC/Mac, then install the IPA to your device over Wi-Fi. Free Apple ID works (app must be refreshed every 7 days).
-- **[Sideloadly](https://sideloadly.io/)** — plug the device into a PC/Mac, drag in the IPA, sign in with your Apple ID.
+- **[AltStore](https://altstore.io/):** install AltServer on a PC/Mac, then install the IPA to your device over Wi-Fi. A free Apple ID works (the app must be refreshed every 7 days).
+- **[Sideloadly](https://sideloadly.io/):** plug the device into a PC/Mac, drag in the IPA, sign in with your Apple ID.
 
-### What the iOS app can and can't do
+Saved files land in the app's **Documents/Downloads** folder, visible in the **Files** app under "YT Downloader", from where you can move them into Photos or share them.
 
-iOS sandboxing forbids apps from launching external programs, so yt-dlp and ffmpeg **cannot run on the device**. Instead the iOS app extracts YouTube streams natively in C# (via [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)). Consequences:
+## What the phone apps can and can't do
 
-- ✅ Downloads **progressive MP4** (single-file video+audio, typically up to ~720p).
-- ✅ Downloads **audio-only M4A** (AAC).
-- ❌ No 1080p/4K on iOS — those require merging separate video+audio streams with ffmpeg, which isn't available on-device.
-- ❌ No channel/playlist bulk download on iOS (yet).
+Phones can't run yt-dlp or ffmpeg, so the Android and iOS apps extract YouTube streams natively in C# (via [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)). That means:
 
-Saved files land in the app's **Documents/Downloads** folder, accessible from the **Files** app under "YT Downloader", from where you can move them into Photos or share them.
+- ✅ **Search** works the same as on desktop.
+- ✅ **Audio-only M4A** (AAC) downloads work.
+- ❌ **Video downloads currently fail.** The phone apps can only save single-file MP4 streams (video and audio already combined), and YouTube has stopped serving those. Separate video and audio streams would need merging on the device, which these builds can't do yet.
+- ❌ No channel/playlist bulk download on the phone apps.
 
 The **desktop** builds keep the full yt-dlp + ffmpeg engine with every quality option.
 
@@ -110,7 +138,7 @@ The **desktop** builds keep the full yt-dlp + ffmpeg engine with every quality o
 
 ## Building from Source
 
-The bundled tool binaries (yt-dlp, FFmpeg) are too large for git and are downloaded during setup. They get embedded into the final executable — the result is completely standalone.
+The bundled tool binaries (yt-dlp, FFmpeg) are too large for git and are downloaded during setup. They get embedded into the final executable, so the result is completely standalone.
 
 ### Windows host
 
@@ -140,14 +168,14 @@ Videos save to a `videos` folder next to the binary (or wherever you choose in t
 
 ### Building the iOS IPA
 
-The IPA **can only be built on macOS** (it needs Xcode's iOS SDK — there is no Windows path). On a Mac with Xcode and the .NET iOS workload:
+The IPA **can only be built on macOS** (it needs Xcode's iOS SDK; there is no Windows path). On a Mac with Xcode and the .NET iOS workload:
 
 ```bash
 dotnet workload install ios
 ./build-ios.sh
 ```
 
-This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly.
+This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly. No Mac? Use the CI route below.
 
 ### Building the Android APK
 
@@ -158,18 +186,18 @@ dotnet workload install android
 ./build-android.sh
 ```
 
-This produces a self-signed `dist/YouTubeDownloader-android.apk`. (Use the .NET 8 SDK specifically — a newer SDK currently mis-resolves the `net8.0-android` platform version.)
+This produces a self-signed `dist/YouTubeDownloader-android.apk`. Use the .NET 8 SDK specifically: a newer SDK currently mis-resolves the `net8.0-android` platform version.
 
 ### Everything at once, via CI
 
-Push a `v*` tag and the [GitHub Actions workflow](.github/workflows/release.yml) builds **all four** platforms — Windows + Linux + the Android APK on their runners, the iOS IPA on a macOS runner — and publishes them to a Release automatically.
+Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitHub Actions workflow](.github/workflows/release.yml) builds **all four** platforms: Windows, Linux and the Android APK on their runners, the iOS IPA on a macOS runner. On a tag it also publishes them to a Release. The Android job checks that the APK really contains the app and its launcher before uploading it.
 
 ### Project layout
 
 | Project | Target | Purpose |
 |---------|--------|---------|
-| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg) |
-| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube extraction (used by mobile) |
+| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg, search via Core) |
+| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube search and extraction (shared) |
 | `YouTubeDownloader.iOS` | `net8.0-ios` (Avalonia) | iOS app head, builds the IPA |
 | `YouTubeDownloader.Android` | `net8.0-android` (Avalonia) | Android app head, builds the APK |
 
@@ -181,10 +209,10 @@ For age-restricted or private videos, place a `cookies.txt` file next to the bin
 
 This project is a GUI wrapper and would not exist without:
 
-- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — powers all video/audio downloading. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
-- **[FFmpeg](https://ffmpeg.org/)** — used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Windows builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds); Linux static builds from [johnvansickle.com](https://johnvansickle.com/ffmpeg/).
-- **[Avalonia UI](https://avaloniaui.net/)** — the cross-platform UI framework behind the Linux, Android and iOS builds.
-- **[YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)** — pure-C# YouTube extraction that powers the Android and iOS apps (no subprocess needed). Licensed under [LGPL-3.0](https://github.com/Tyrrrz/YoutubeExplode/blob/master/License.txt).
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp):** powers all desktop video/audio downloading. Licensed under [The Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE).
+- **[FFmpeg](https://ffmpeg.org/):** used by yt-dlp for video/audio merging and conversion. Licensed under [LGPL/GPL](https://ffmpeg.org/legal.html). Builds from [yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds) for both Windows and Linux.
+- **[Avalonia UI](https://avaloniaui.net/):** the cross-platform UI framework behind every build.
+- **[YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode):** pure-C# YouTube search and extraction, used for search everywhere and for downloads in the phone apps. Licensed under [LGPL-3.0](https://github.com/Tyrrrz/YoutubeExplode/blob/master/License.txt).
 
 ## License
 

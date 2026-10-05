@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:core="using:YouTubeDownloader.Core"
              x:Class="YouTubeDownloader.iOS.MainView"
              Background="{DynamicResource BgDarkBrush}">
 
@@ -18,12 +19,13 @@
             <!-- URL card -->
             <Border Classes="card">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Video URL" Classes="label"/>
+                    <TextBlock Text="Video link or search" Classes="label"/>
                     <Panel>
                         <TextBox Name="UrlTextBox" Classes="yt"
-                                 TextChanged="UrlTextBox_TextChanged"/>
+                                 TextChanged="UrlTextBox_TextChanged"
+                                 KeyDown="UrlTextBox_KeyDown"/>
                         <TextBlock Name="UrlPlaceholder"
-                                   Text="Paste a YouTube link…"
+                                   Text="Paste a link or type to search…"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    VerticalAlignment="Center"
                                    Margin="15,0,0,0"
@@ -37,6 +39,39 @@
                                 Content="🔍 Fetch Info" Classes="red"
                                 Click="FetchButton_Click"/>
                     </Grid>
+
+                    <!-- Search results (shown when the box holds search words) -->
+                    <Border Name="SearchResultsPanel"
+                            Background="{DynamicResource BgDarkBrush}"
+                            CornerRadius="10" Padding="8"
+                            IsVisible="False">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Name="SearchStatusText" Classes="label"
+                                           VerticalAlignment="Center" TextWrapping="Wrap"
+                                           Margin="6,0,0,0"/>
+                                <Button Name="CloseResultsButton" Grid.Column="1"
+                                        Content="✕" Classes="ghost" Padding="14,8"
+                                        Click="CloseResultsButton_Click"/>
+                            </Grid>
+                            <ListBox Name="SearchResultsList" Classes="results"
+                                     SelectionChanged="SearchResultsList_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="core:SearchResult">
+                                        <StackPanel Margin="2,4">
+                                            <TextBlock Text="{CompiledBinding Title}"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       FontSize="15" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" MaxLines="2"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{CompiledBinding Details}" Classes="label"
+                                                       Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Video info -->
                     <Border Name="VideoInfoPanel"

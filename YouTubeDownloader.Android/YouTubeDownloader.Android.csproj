@@ -20,14 +20,15 @@
     <RootNamespace>YouTubeDownloader.Droid</RootNamespace>
 
     <ApplicationId>com.nitro70.youtubedownloader</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>3.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>3.3.0</ApplicationDisplayVersion>
 
     <!-- Emit an installable .apk (Release would otherwise produce an .aab). -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
 
-    <!-- Avalonia + the IL trimmer/AOT don't play nicely (ILLink IL1032 in
-         Release). Disable both — a slightly larger APK is fine for sideloading. -->
+    <!-- Trimming and AOT stay off. The ILLink IL1032 error that first prompted this was
+         the doubled Avalonia path fixed at the bottom of this file, but a trimmed Avalonia
+         build has never been tried on a device, and a larger APK is fine for sideloading. -->
     <AndroidLinkMode>None</AndroidLinkMode>
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
@@ -43,5 +44,24 @@
   <ItemGroup>
     <ProjectReference Include="..\YouTubeDownloader.Core\YouTubeDownloader.Core.csproj" />
   </ItemGroup>
+
+  <!-- Avalonia compiles the XAML into a copy of the app assembly under obj\...\Avalonia\ and points
+       @(IntermediateAssembly) at that copy. The Android SDK's per-ABI inner builds are handed the
+       outer build's already-redirected path (_OuterIntermediateAssembly), and Avalonia redirects it
+       a second time, to obj\...\Avalonia\Avalonia\, which does not exist. The packager then leaves
+       the app's own assembly, and with it the launcher activity, out of the APK. Undo the second
+       redirect in those inner builds. -->
+  <Target Name="KeepOuterAvaloniaAssemblyInInnerBuilds"
+          AfterTargets="InjectAvaloniaXamlOutput"
+          Condition="'$(_OuterIntermediateAssembly)' != ''">
+    <ItemGroup>
+      <IntermediateAssembly Remove="@(IntermediateAssembly)" />
+      <IntermediateAssembly Include="$(_OuterIntermediateAssembly)" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(_DebugSymbolsIntermediatePath)' != ''">
+      <_DebugSymbolsIntermediatePath Remove="@(_DebugSymbolsIntermediatePath)" />
+      <_DebugSymbolsIntermediatePath Include="$([System.IO.Path]::ChangeExtension('$(_OuterIntermediateAssembly)', '.pdb'))" />
+    </ItemGroup>
+  </Target>
 
 </Project>

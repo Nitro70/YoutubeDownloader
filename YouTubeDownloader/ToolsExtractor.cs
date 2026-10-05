@@ -22,7 +22,7 @@ public static class ToolsExtractor
 
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Extract whatever tool resources are embedded — names are not
+        // Extract whatever tool resources are embedded; names are not
         // hardcoded, so a new ffmpeg build with different DLL version numbers
         // still extracts correctly.
         string appVersion = assembly.GetName().Version?.ToString() ?? "0.0.0.0";

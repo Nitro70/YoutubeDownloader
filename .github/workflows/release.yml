@@ -233,6 +233,23 @@ jobs:
           cp "$APK" YouTubeDownloader-android.apk
           ls -lh YouTubeDownloader-android.apk
 
+      # v3.2.0 shipped an APK that built fine but had no launcher activity and none
+      # of the app's own code (an Avalonia + Android SDK path bug). Refuse to upload
+      # an APK like that again.
+      - name: Verify APK
+        run: |
+          set -e
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          "$AAPT2" dump badging YouTubeDownloader-android.apk > badging.txt
+          grep -E "^package:|^sdkVersion|^targetSdkVersion|launchable-activity" badging.txt
+          if ! grep -q "^launchable-activity:" badging.txt; then
+            echo "::error::APK has no launcher activity, so it could not be opened"; exit 1
+          fi
+          if ! unzip -p YouTubeDownloader-android.apk assemblies/assemblies.manifest | grep -q "YouTubeDownloader.Android"; then
+            echo "::error::APK is missing the app's own assembly"; exit 1
+          fi
+          echo "APK has its launcher activity and the app assembly."
+
       - uses: actions/upload-artifact@v4
         with:
           name: android
@@ -263,15 +280,16 @@ jobs:
             |----------|------|------------|
             | **Windows (x64)** | `YouTubeDownloader-windows-x64.exe` | Double-click (GUI) or run with args (CLI). |
             | **Linux (x64)** | `YouTubeDownloader-linux-x64` | `chmod +x` then run (GUI or CLI). |
-            | **Android** | `YouTubeDownloader-android.apk` | Self-signed — enable "install unknown apps", then open the APK. |
-            | **iPhone / iPad** | `YouTubeDownloader-ios.ipa` | Unsigned — sideload with AltStore or Sideloadly (see README). |
+            | **Android** | `YouTubeDownloader-android.apk` | Self-signed: enable "install unknown apps", then open the APK. |
+            | **iPhone / iPad** | `YouTubeDownloader-ios.ipa` | Unsigned: sideload with AltStore or Sideloadly (see README). |
 
-            ### Mobile notes (Android & iOS)
-            The mobile builds do YouTube extraction natively in C# (no yt-dlp /
-            ffmpeg subprocess, which iOS forbids and Android can't bundle easily).
-            They download **progressive MP4** (single-file video+audio, up to
-            ~720p) and **audio-only M4A**. Higher resolutions that require merging
-            separate streams aren't available on mobile in this version.
+            Every version can search YouTube: type words instead of a link.
+
+            ### Phone apps (Android & iOS)
+            The phone builds extract YouTube natively in C#, because phones can't
+            run yt-dlp or ffmpeg. Search and **audio-only M4A** downloads work.
+            **Video downloads currently fail:** the phone apps can only save
+            single-file MP4 streams, and YouTube has stopped serving those.
 
             Desktop (Windows/Linux) keeps the full yt-dlp + ffmpeg engine with
             all quality options, plus a command-line mode.

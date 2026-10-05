@@ -11,7 +11,7 @@
     <AssemblyName>YouTubeDownloader.iOS</AssemblyName>
 
     <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
-         runtime — that's what makes a sideloaded build run on a stock iPhone. -->
+         runtime; that is what makes a sideloaded build run on a stock iPhone. -->
     <MtouchLink Condition="'$(Configuration)' == 'Release'">SdkOnly</MtouchLink>
   </PropertyGroup>
 

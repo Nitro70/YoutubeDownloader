@@ -16,6 +16,7 @@ using Avalonia.Threading;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using Newtonsoft.Json.Linq;
+using YouTubeDownloader.Core;
 using MsgIcon = MsBox.Avalonia.Enums.Icon;
 
 namespace YouTubeDownloader;
@@ -32,6 +33,11 @@ public partial class MainWindow : Window
     private readonly object _processLock = new();
     private CancellationTokenSource? _cancellationTokenSource;
     private bool _isDownloading;
+
+    // Search runs through the shared Core library (YoutubeExplode), the same code the
+    // phone apps use. Downloads stay on yt-dlp.
+    private readonly YouTubeService _youtube = new();
+    private CancellationTokenSource? _searchCts;
 
     public MainWindow()
     {
@@ -130,9 +136,11 @@ public partial class MainWindow : Window
             {
                 LogListBox.Items.RemoveAt(0);
             }
-            if (LogListBox.Items.Count > 0)
+            // Scroll only the log's own box. ScrollIntoView would also scroll the whole
+            // page down to the log, pushing the search results out of sight.
+            if (LogListBox.Scroll is ScrollViewer logScroll)
             {
-                LogListBox.ScrollIntoView(LogListBox.Items[LogListBox.Items.Count - 1]);
+                logScroll.ScrollToEnd();
             }
         }, DispatcherPriority.Background);
     }
@@ -165,13 +173,26 @@ public partial class MainWindow : Window
 
     private async void FetchInfoButton_Click(object? sender, RoutedEventArgs e)
     {
-        string url = UrlTextBox.Text?.Trim() ?? string.Empty;
-        if (!IsValidHttpUrl(url))
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (text.Length == 0)
         {
-            await ShowMessageAsync("Warning", "Please enter a valid http(s) URL", MsgIcon.Warning);
+            await ShowMessageAsync("Warning", "Paste a link or type something to search for.", MsgIcon.Warning);
             return;
         }
 
+        if (YouTubeInput.TryGetUrl(text, out string url))
+        {
+            if (url != text) UrlTextBox.Text = url;
+            await FetchAndShowInfoAsync(url);
+        }
+        else
+        {
+            await RunSearchAsync(text);
+        }
+    }
+
+    private async Task FetchAndShowInfoAsync(string url)
+    {
         FetchInfoButton.IsEnabled = false;
         Log("Fetching video information...");
 
@@ -188,6 +209,110 @@ public partial class MainWindow : Window
         {
             FetchInfoButton.IsEnabled = true;
         }
+    }
+
+    /// <summary>Searches YouTube and lists the results under the box. Returns them too.</summary>
+    private async Task<IReadOnlyList<SearchResult>> RunSearchAsync(string query)
+    {
+        _searchCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _searchCts = cts;
+
+        FetchInfoButton.IsEnabled = false;
+        VideoInfoPanel.IsVisible = false;
+        SearchResultsPanel.IsVisible = true;
+        SearchResultsList.ItemsSource = null;
+        SearchStatusText.Text = $"Searching for \"{query}\"...";
+        Log($"Searching YouTube for: {query}");
+
+        try
+        {
+            var results = await _youtube.SearchAsync(query, 10, cts.Token);
+            if (cts.IsCancellationRequested) return Array.Empty<SearchResult>();
+
+            SearchResultsList.ItemsSource = results;
+            SearchStatusText.Text = results.Count == 0
+                ? $"No videos found for \"{query}\""
+                : $"Top {results.Count} results for \"{query}\". Click one to use it.";
+            Log(results.Count == 0 ? "No results." : $"Found {results.Count} results.");
+            return results;
+        }
+        catch (OperationCanceledException)
+        {
+            return Array.Empty<SearchResult>();
+        }
+        catch (Exception ex)
+        {
+            SearchStatusText.Text = $"Search failed: {ex.Message}";
+            Log($"Search failed: {ex.Message}");
+            return Array.Empty<SearchResult>();
+        }
+        finally
+        {
+            if (_searchCts == cts) FetchInfoButton.IsEnabled = true;
+        }
+    }
+
+    private async void SearchResultsList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (SearchResultsList.SelectedItem is not SearchResult picked) return;
+
+        SearchResultsPanel.IsVisible = false;
+        UrlTextBox.Text = picked.Url;
+        Log($"Picked: {picked.Title}");
+        await FetchAndShowInfoAsync(picked.Url);
+    }
+
+    private void CloseResultsButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _searchCts?.Cancel();
+        SearchResultsPanel.IsVisible = false;
+    }
+
+    private async void CopyLinkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (!YouTubeInput.TryGetUrl(UrlTextBox.Text, out string url) || Clipboard is null) return;
+        try
+        {
+            await Clipboard.SetTextAsync(url);
+            Log($"Copied link: {url}");
+            CopyLinkButton.Content = "✓ Copied";
+            await Task.Delay(1500);
+            CopyLinkButton.Content = "🔗 Copy link";
+        }
+        catch (Exception ex)
+        {
+            Log($"Copy failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The link in the box, or, when it holds search words, the first search result.
+    /// Null when there is nothing to download.
+    /// </summary>
+    private async Task<string?> ResolveDownloadUrlAsync()
+    {
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+        {
+            await ShowMessageAsync("Warning", "Paste a link or type something to search for.", MsgIcon.Warning);
+            return null;
+        }
+        if (YouTubeInput.TryGetUrl(text, out string url)) return url;
+
+        var results = await RunSearchAsync(text);
+        if (results.Count == 0)
+        {
+            await ShowMessageAsync("No results", $"Nothing found on YouTube for \"{text}\".", MsgIcon.Warning);
+            return null;
+        }
+
+        var top = results[0];
+        SearchResultsPanel.IsVisible = false;
+        UrlTextBox.Text = top.Url;
+        Log($"Top result: {top.Title} ({top.Author})");
+        _ = FetchAndShowInfoAsync(top.Url);
+        return top.Url;
     }
 
     private async Task<JObject?> FetchVideoInfoAsync(string url)
@@ -372,26 +497,32 @@ public partial class MainWindow : Window
     private void UrlTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
         UrlPlaceholder.IsVisible = string.IsNullOrEmpty(UrlTextBox.Text);
+
+        // The button says what Enter will do: look up a link, or search for words.
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (FetchInfoButton is not null)
+        {
+            FetchInfoButton.Content = text.Length == 0 || YouTubeInput.TryGetUrl(text, out _)
+                ? "🔍 Fetch Info"
+                : "🔍 Search";
+        }
     }
 
     private async void DownloadButton_Click(object? sender, RoutedEventArgs e)
     {
-        string url = UrlTextBox.Text?.Trim() ?? string.Empty;
-        if (!IsValidHttpUrl(url))
-        {
-            await ShowMessageAsync("Warning", "Please enter a valid http(s) URL", MsgIcon.Warning);
-            return;
-        }
         if (_isDownloading) return;
+        string? url = await ResolveDownloadUrlAsync();
+        if (url == null || _isDownloading) return;
         await StartDownloadAsync(url, isChannel: false);
     }
 
     private async void ChannelDownloadButton_Click(object? sender, RoutedEventArgs e)
     {
-        string url = UrlTextBox.Text?.Trim() ?? string.Empty;
-        if (!IsValidHttpUrl(url))
+        if (!YouTubeInput.TryGetUrl(UrlTextBox.Text, out string url))
         {
-            await ShowMessageAsync("Warning", "Please enter a valid http(s) channel URL", MsgIcon.Warning);
+            await ShowMessageAsync("Warning",
+                "Enter a channel or playlist link. Search words only work for single videos.",
+                MsgIcon.Warning);
             return;
         }
         if (_isDownloading) return;
@@ -406,13 +537,6 @@ public partial class MainWindow : Window
         {
             await StartDownloadAsync(url, isChannel: true);
         }
-    }
-
-    private static bool IsValidHttpUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
     private static bool TryValidateFilename(string filename, out string error)

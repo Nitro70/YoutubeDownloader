@@ -1,5 +1,6 @@
 using System.Net.Http;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -12,11 +13,13 @@ public partial class MainView : UserControl
     private readonly YouTubeService _service = new();
     private readonly string _outputDirectory;
     private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _searchCts;
     private bool _busy;
 
     public MainView()
     {
         InitializeComponent();
+
         _outputDirectory = GetDownloadDirectory();
     }
 
@@ -51,6 +54,24 @@ public partial class MainView : UserControl
     private void UrlTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
         UrlPlaceholder.IsVisible = string.IsNullOrEmpty(UrlTextBox.Text);
+
+        // The button says what it will do: look up a link, or search for words.
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (FetchButton is not null)
+        {
+            FetchButton.Content = text.Length == 0 || YouTubeInput.TryGetUrl(text, out _)
+                ? "🔍 Fetch Info"
+                : "🔍 Search";
+        }
+    }
+
+    private void UrlTextBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && FetchButton.IsEnabled && !_busy)
+        {
+            e.Handled = true;
+            FetchButton_Click(FetchButton, new RoutedEventArgs());
+        }
     }
 
     private async void PasteButton_Click(object? sender, RoutedEventArgs e)
@@ -70,13 +91,31 @@ public partial class MainView : UserControl
 
     private async void FetchButton_Click(object? sender, RoutedEventArgs e)
     {
-        string url = UrlTextBox.Text?.Trim() ?? string.Empty;
-        if (!IsValidUrl(url))
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (text.Length == 0)
         {
-            SetStatus("Enter a valid YouTube link.");
+            SetStatus("Paste a link or type something to search for.");
             return;
         }
 
+        if (YouTubeInput.TryGetUrl(text, out string url))
+        {
+            if (!IsYouTubeUrl(url))
+            {
+                SetStatus("Only YouTube links work in this app.");
+                return;
+            }
+            if (url != text) UrlTextBox.Text = url;
+            await FetchAndShowInfoAsync(url);
+        }
+        else
+        {
+            await RunSearchAsync(text);
+        }
+    }
+
+    private async Task FetchAndShowInfoAsync(string url)
+    {
         FetchButton.IsEnabled = false;
         SetStatus("Fetching info…");
         try
@@ -101,6 +140,60 @@ public partial class MainView : UserControl
         }
     }
 
+    /// <summary>Searches YouTube and lists the results under the box. Returns them too.</summary>
+    private async Task<IReadOnlyList<SearchResult>> RunSearchAsync(string query)
+    {
+        _searchCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _searchCts = cts;
+
+        FetchButton.IsEnabled = false;
+        VideoInfoPanel.IsVisible = false;
+        SearchResultsPanel.IsVisible = true;
+        SearchResultsList.ItemsSource = null;
+        SearchStatusText.Text = $"Searching for \"{query}\"…";
+
+        try
+        {
+            var results = await _service.SearchAsync(query, 10, cts.Token);
+            if (cts.IsCancellationRequested) return Array.Empty<SearchResult>();
+
+            SearchResultsList.ItemsSource = results;
+            SearchStatusText.Text = results.Count == 0
+                ? $"No videos found for \"{query}\""
+                : $"Top {results.Count} results. Tap one to use it.";
+            return results;
+        }
+        catch (OperationCanceledException)
+        {
+            return Array.Empty<SearchResult>();
+        }
+        catch (Exception ex)
+        {
+            SearchStatusText.Text = $"Search failed: {ex.Message}";
+            return Array.Empty<SearchResult>();
+        }
+        finally
+        {
+            if (_searchCts == cts) FetchButton.IsEnabled = true;
+        }
+    }
+
+    private async void SearchResultsList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (SearchResultsList.SelectedItem is not SearchResult picked) return;
+
+        SearchResultsPanel.IsVisible = false;
+        UrlTextBox.Text = picked.Url;
+        await FetchAndShowInfoAsync(picked.Url);
+    }
+
+    private void CloseResultsButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _searchCts?.Cancel();
+        SearchResultsPanel.IsVisible = false;
+    }
+
     private async Task LoadThumbnailAsync(string url)
     {
         try
@@ -117,15 +210,45 @@ public partial class MainView : UserControl
         }
     }
 
+    /// <summary>
+    /// The YouTube link in the box, or, when it holds search words, the first search
+    /// result. Null when there is nothing to download.
+    /// </summary>
+    private async Task<string?> ResolveDownloadUrlAsync()
+    {
+        string text = UrlTextBox.Text?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+        {
+            SetStatus("Paste a link or type something to search for.");
+            return null;
+        }
+
+        if (YouTubeInput.TryGetUrl(text, out string url))
+        {
+            if (IsYouTubeUrl(url)) return url;
+            SetStatus("Only YouTube links work in this app.");
+            return null;
+        }
+
+        var results = await RunSearchAsync(text);
+        if (results.Count == 0)
+        {
+            SetStatus($"Nothing found for \"{text}\".");
+            return null;
+        }
+
+        var top = results[0];
+        SearchResultsPanel.IsVisible = false;
+        UrlTextBox.Text = top.Url;
+        _ = FetchAndShowInfoAsync(top.Url);
+        return top.Url;
+    }
+
     private async void DownloadButton_Click(object? sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        string url = UrlTextBox.Text?.Trim() ?? string.Empty;
-        if (!IsValidUrl(url))
-        {
-            SetStatus("Enter a valid YouTube link.");
-            return;
-        }
+        string? url = await ResolveDownloadUrlAsync();
+        if (url == null || _busy) return;
 
         var kind = AudioRadio.IsChecked == true ? DownloadKind.Audio : DownloadKind.Video;
         string? customName = FilenameTextBox.Text?.Trim();
@@ -178,12 +301,9 @@ public partial class MainView : UserControl
         Dispatcher.UIThread.Post(() => StatusText.Text = text);
     }
 
-    private static bool IsValidUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-            && (uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
-                || uri.Host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase));
-    }
+    // The phone apps use YoutubeExplode, which only understands YouTube links.
+    private static bool IsYouTubeUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Host.EndsWith("youtube.com", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.EndsWith("youtu.be", StringComparison.OrdinalIgnoreCase));
 }

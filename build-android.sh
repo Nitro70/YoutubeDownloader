@@ -3,7 +3,7 @@
 #
 # Requirements:
 #   * .NET 8 SDK (the app targets net8.0-android; a newer SDK mis-resolves the
-#     platform version — pin 8.0 via global.json if your default is newer).
+#     platform version; pin 8.0 via global.json if your default is newer).
 #   * Android workload:  dotnet workload install android
 #   * An Android SDK (ANDROID_HOME) with platform 34 + build-tools 34, and a JDK.
 #

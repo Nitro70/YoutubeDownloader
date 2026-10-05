@@ -2,7 +2,7 @@ using UIKit;
 
 namespace YouTubeDownloader.iOS;
 
-// NOTE: do not name this class "Application" — that collides with
+// NOTE: do not name this class "Application": that collides with
 // Avalonia.Application and breaks `App : Application` in App.axaml.cs.
 public static class Program
 {
