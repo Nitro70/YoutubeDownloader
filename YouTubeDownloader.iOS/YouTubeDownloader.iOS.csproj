@@ -11,8 +11,11 @@
     <AssemblyName>YouTubeDownloader.iOS</AssemblyName>
 
     <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
-         runtime; that is what makes a sideloaded build run on a stock iPhone. -->
-    <MtouchLink Condition="'$(Configuration)' == 'Release'">SdkOnly</MtouchLink>
+         runtime; that is what makes a sideloaded build run on a stock iPhone.
+         No trimming (None, not SdkOnly): YoutubeExplode 6.6+ ships C# extension-member
+         polyfills that crash the .NET 8 iOS linker's "Collect Unmarked Members" step,
+         which only runs when something is trimmed. Costs IPA size, not behaviour. -->
+    <MtouchLink Condition="'$(Configuration)' == 'Release'">None</MtouchLink>
   </PropertyGroup>
 
   <ItemGroup>

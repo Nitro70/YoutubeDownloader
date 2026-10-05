@@ -21,7 +21,7 @@ dotnet publish "$PROJ" \
     -c Release -f net8.0-ios -r ios-arm64 \
     -p:EnableCodeSigning=false \
     -p:CodesignKey= \
-    -p:MtouchLink=SdkOnly \
+    -p:MtouchLink=None \
     -o ios-out
 
 mkdir -p dist
