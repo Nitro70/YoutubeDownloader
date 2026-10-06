@@ -132,12 +132,18 @@ jobs:
 
       # The .NET 8 iOS workload is built against the iOS 18 SDK, so an untrimmed
       # build needs Xcode 16. Pick the newest 16.x on the runner explicitly.
+      # Real directories only: the image also has symlink aliases such as
+      # Xcode_16.4.0.app, and clang/SDK lookups fail through those.
       - name: Select Xcode 16
         run: |
-          XCODE=$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)
+          set -e
+          XCODE=$(find /Applications -maxdepth 1 -type d -name 'Xcode_16*.app' | sort -V | tail -1)
           echo "Using $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk macosx --show-sdk-path
+          xcrun -f clang
 
       - name: Build app bundle (unsigned, device arm64, full AOT)
         run: >
