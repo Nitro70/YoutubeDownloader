@@ -1,5 +1,7 @@
+using System.Net;
 using YoutubeExplode;
 using YoutubeExplode.Common;
+using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
 using YouTubeDownloader.Core.Mp4;
 
@@ -16,7 +18,26 @@ namespace YouTubeDownloader.Core;
 /// </summary>
 public sealed class YouTubeService
 {
-    private readonly YoutubeClient _youtube = new();
+    // One connection pool for every client, with cookies off at this level: YoutubeExplode
+    // keeps each client's cookies itself. Its default HttpClient has a shared cookie jar, which
+    // made every new client come back as the same visitor. The same handler on every platform;
+    // the phones' native handlers compressed by default, so this asks for it.
+    private static readonly HttpClient Http = new(new SocketsHttpHandler
+    {
+        UseCookies = false,
+        AutomaticDecompression = DecompressionMethods.All,
+        ConnectTimeout = TimeSpan.FromSeconds(15),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    });
+
+    // Each YoutubeClient is one anonymous YouTube visitor. YouTube decides per visitor whether
+    // the stream links it hands out work: for some visitors (an experiment, seen as fexp
+    // 52227522 in the links) every link answers 403, for the rest they all work. So on a 403
+    // the client is replaced by a new visitor; see FetchManifestAsync.
+    private YoutubeClient _youtube = new(Http);
+
+    /// <summary>How many visitors to try before giving up on a 403.</summary>
+    private const int MaxVisitors = 5;
 
     /// <summary>Tallest video to download, in pixels. H.264 on YouTube rarely goes above 1080.</summary>
     public int MaxVideoHeight { get; set; } = 1080;
@@ -75,7 +96,7 @@ public sealed class YouTubeService
         CancellationToken ct = default)
     {
         var video = await _youtube.Videos.GetAsync(url, ct);
-        var manifest = await _youtube.Videos.Streams.GetManifestAsync(video.Id, ct);
+        var manifest = await FetchManifestAsync(video.Id, ct);
 
         string baseName = string.IsNullOrWhiteSpace(customName)
             ? Sanitize(video.Title)
@@ -123,6 +144,31 @@ public sealed class YouTubeService
         {
             TryDelete(videoTemp);
             TryDelete(audioTemp);
+        }
+    }
+
+    /// <summary>
+    /// Fetches the stream list, starting over as a new visitor each time YouTube answers 403.
+    /// The visitor is baked into the stream links (googlevideo gets no cookies), so any client
+    /// can download them afterwards.
+    /// </summary>
+    private async Task<StreamManifest> FetchManifestAsync(VideoId videoId, CancellationToken ct)
+    {
+        for (int visitor = 1; ; visitor++)
+        {
+            var youtube = _youtube;
+            try
+            {
+                return await youtube.Videos.Streams.GetManifestAsync(videoId, ct);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+            {
+                // Replace it unless another call already has, also when giving up, so that
+                // trying again starts as a new visitor. The old client is dropped, not
+                // disposed: a search may still be using it.
+                Interlocked.CompareExchange(ref _youtube, new YoutubeClient(Http), youtube);
+                if (visitor >= MaxVisitors) throw;
+            }
         }
     }
 

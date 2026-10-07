@@ -128,7 +128,7 @@
                                  Minimum="0" Maximum="100" Value="0"/>
                     <TextBlock Name="StatusText" Text="Ready"
                                Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontSize="14"/>
+                               FontSize="14" TextWrapping="Wrap"/>
                     <TextBlock Name="HintText"
                                Text="Saved files appear in the Files app under &quot;YT Downloader&quot;."
                                Classes="label" TextWrapping="Wrap"/>

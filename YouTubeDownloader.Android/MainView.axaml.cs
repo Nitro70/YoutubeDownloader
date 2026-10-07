@@ -132,7 +132,7 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            SetStatus($"Couldn't fetch: {ex.Message}");
+            SetStatus($"Couldn't fetch: {ErrorText.Describe(ex)}");
         }
         finally
         {
@@ -164,13 +164,13 @@ public partial class MainView : UserControl
                 : $"Top {results.Count} results. Tap one to use it.";
             return results;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
             return Array.Empty<SearchResult>();
         }
         catch (Exception ex)
         {
-            SearchStatusText.Text = $"Search failed: {ex.Message}";
+            SearchStatusText.Text = $"Search failed: {ErrorText.Describe(ex)}";
             return Array.Empty<SearchResult>();
         }
         finally
@@ -276,13 +276,13 @@ public partial class MainView : UserControl
             DownloadProgressBar.Value = 100;
             SetStatus($"Saved: {Path.GetFileName(path)}");
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_cts?.IsCancellationRequested == true)
         {
             SetStatus("Cancelled.");
         }
         catch (Exception ex)
         {
-            SetStatus($"Failed: {ex.Message}");
+            SetStatus($"Failed: {ErrorText.Describe(ex)}");
         }
         finally
         {
