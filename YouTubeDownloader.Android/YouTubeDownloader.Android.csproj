@@ -20,8 +20,8 @@
     <RootNamespace>YouTubeDownloader.Droid</RootNamespace>
 
     <ApplicationId>com.nitro70.youtubedownloader</ApplicationId>
-    <ApplicationVersion>2</ApplicationVersion>
-    <ApplicationDisplayVersion>3.3.0</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>3.4.0</ApplicationDisplayVersion>
 
     <!-- Emit an installable .apk (Release would otherwise produce an .aab). -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>

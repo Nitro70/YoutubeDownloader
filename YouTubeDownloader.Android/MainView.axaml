@@ -135,7 +135,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="Native extraction • progressive MP4 up to ~720p • no ffmpeg on Android"
+            <TextBlock Text="Video up to 1080p (H.264) • video and audio merged on the phone, no ffmpeg"
                        Classes="label"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"

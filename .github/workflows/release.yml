@@ -302,9 +302,9 @@ jobs:
 
             ### Phone apps (Android & iOS)
             The phone builds extract YouTube natively in C#, because phones can't
-            run yt-dlp or ffmpeg. Search and **audio-only M4A** downloads work.
-            **Video downloads currently fail:** the phone apps can only save
-            single-file MP4 streams, and YouTube has stopped serving those.
+            run yt-dlp or ffmpeg. They search, download **video as MP4 up to
+            1080p** (H.264 video and AAC audio merged on the phone, no
+            re-encoding) and **audio-only M4A**. No 1440p/4K on phones.
 
             Desktop (Windows/Linux) keeps the full yt-dlp + ffmpeg engine with
             all quality options, plus a command-line mode.

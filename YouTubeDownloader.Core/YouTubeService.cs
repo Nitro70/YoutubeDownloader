@@ -1,24 +1,25 @@
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos.Streams;
+using YouTubeDownloader.Core.Mp4;
 
 namespace YouTubeDownloader.Core;
 
 /// <summary>
-/// Native (pure-managed) YouTube access used by the iOS app, where launching
-/// yt-dlp/ffmpeg as subprocesses is impossible. Backed by YoutubeExplode.
+/// Native (pure-managed) YouTube access for the phone apps, where launching yt-dlp or ffmpeg
+/// as a subprocess is impossible. Backed by YoutubeExplode.
 ///
-/// Limitations vs. the desktop yt-dlp engine:
-///   * Only progressive (muxed) MP4 streams are offered for video: these
-///     carry audio+video in one file, so no ffmpeg muxing is required. That
-///     caps quality at whatever progressive itag YouTube serves (commonly
-///     360p or 720p).
-///   * "Audio" downloads the best audio-only stream as-is (usually M4A/AAC).
-///     We do not transcode to MP3 because that would need ffmpeg.
+/// Video: YouTube serves video and audio as separate streams, so this downloads an H.264 MP4
+/// video stream (up to <see cref="MaxVideoHeight"/>) and an AAC audio stream and merges them
+/// with <see cref="Mp4Muxer"/>, in plain C# with no re-encoding.
+/// Audio: the best AAC stream as-is, saved as .m4a. No MP3, which would need ffmpeg.
 /// </summary>
 public sealed class YouTubeService
 {
     private readonly YoutubeClient _youtube = new();
+
+    /// <summary>Tallest video to download, in pixels. H.264 on YouTube rarely goes above 1080.</summary>
+    public int MaxVideoHeight { get; set; } = 1080;
 
     public async Task<VideoInfo> GetVideoInfoAsync(string url, CancellationToken ct = default)
     {
@@ -76,38 +77,139 @@ public sealed class YouTubeService
         var video = await _youtube.Videos.GetAsync(url, ct);
         var manifest = await _youtube.Videos.Streams.GetManifestAsync(video.Id, ct);
 
-        IStreamInfo stream = kind == DownloadKind.Audio
-            ? SelectAudioStream(manifest)
-            : SelectVideoStream(manifest);
-
         string baseName = string.IsNullOrWhiteSpace(customName)
             ? Sanitize(video.Title)
             : Sanitize(customName);
-
-        // An audio-only MP4 is an M4A; name it that way so players treat it as audio.
-        string ext = kind == DownloadKind.Audio && stream.Container == Container.Mp4
-            ? "m4a"
-            : stream.Container.Name;
-        string path = Path.Combine(outputDirectory, $"{baseName}.{ext}");
-        path = MakeUnique(path);
-
         Directory.CreateDirectory(outputDirectory);
-        await _youtube.Videos.Streams.DownloadAsync(stream, path, progress, ct);
-        return path;
+
+        if (kind == DownloadKind.Audio)
+        {
+            var audio = SelectAudioStream(manifest);
+            // An audio-only MP4 is an M4A; name it that way so players treat it as audio.
+            string ext = audio.Container == Container.Mp4 ? "m4a" : audio.Container.Name;
+            string audioPath = MakeUnique(Path.Combine(outputDirectory, $"{baseName}.{ext}"));
+            await DownloadOneAsync(audio, audioPath, Scaled(progress, 0, 1), ct);
+            return audioPath;
+        }
+
+        var (videoStream, audioStream) = SelectVideoAndAudio(manifest);
+        string output = MakeUnique(Path.Combine(outputDirectory, $"{baseName}.mp4"));
+
+        if (audioStream is null)
+        {
+            // A combined stream, for the rare video YouTube still offers one for.
+            await DownloadOneAsync(videoStream, output, Scaled(progress, 0, 1), ct);
+            return output;
+        }
+
+        string tempBase = Path.Combine(Path.GetTempPath(), $"ytd-{video.Id}-{Guid.NewGuid():N}");
+        string videoTemp = tempBase + ".video.mp4";
+        string audioTemp = tempBase + ".audio.m4a";
+        try
+        {
+            // Progress: the two downloads share 0 to 95 % by size, merging takes the rest.
+            double videoBytes = videoStream.Size.Bytes;
+            double audioBytes = audioStream.Size.Bytes;
+            double total = Math.Max(1, videoBytes + audioBytes);
+            double videoShare = 0.95 * videoBytes / total;
+            double audioShare = 0.95 * audioBytes / total;
+
+            await _youtube.Videos.Streams.DownloadAsync(videoStream, videoTemp, Scaled(progress, 0, videoShare), ct);
+            await _youtube.Videos.Streams.DownloadAsync(audioStream, audioTemp, Scaled(progress, videoShare, audioShare), ct);
+            await Mp4Muxer.MuxAsync(videoTemp, audioTemp, output, Scaled(progress, 0.95, 0.05), ct);
+            return output;
+        }
+        finally
+        {
+            TryDelete(videoTemp);
+            TryDelete(audioTemp);
+        }
     }
 
-    private static IStreamInfo SelectVideoStream(StreamManifest manifest)
+    /// <summary>Downloads one stream, removing the partial file if it fails or is cancelled.</summary>
+    private async Task DownloadOneAsync(IStreamInfo stream, string path, IProgress<double>? progress, CancellationToken ct)
     {
-        // Muxed = progressive (video+audio in one file). No ffmpeg needed.
-        var muxed = manifest.GetMuxedStreams().ToList();
-        if (muxed.Count == 0)
+        try
         {
-            throw new InvalidOperationException(
-                "No progressive (single-file) video stream is available for this video. " +
-                "High-resolution streams require merging separate audio/video tracks, " +
-                "which this mobile build can't do without ffmpeg.");
+            await _youtube.Videos.Streams.DownloadAsync(stream, path, progress, ct);
         }
-        return muxed.GetWithHighestVideoQuality();
+        catch
+        {
+            TryDelete(path);
+            throw;
+        }
+    }
+
+    private (IStreamInfo Video, IStreamInfo? Audio) SelectVideoAndAudio(StreamManifest manifest)
+    {
+        // H.264 in MP4 plays everywhere (iPhone Photos, Android galleries); VP9 and AV1 don't.
+        var h264 = manifest.GetVideoOnlyStreams()
+            .Where(s => s.Container == Container.Mp4
+                        && s.VideoCodec.StartsWith("avc1", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var video = h264
+            .Where(s => s.VideoQuality.MaxHeight <= MaxVideoHeight)
+            .OrderByDescending(s => s.VideoQuality).ThenByDescending(s => s.Bitrate)
+            .FirstOrDefault()
+            ?? h264.OrderBy(s => s.VideoQuality).FirstOrDefault();
+
+        var aac = manifest.GetAudioOnlyStreams()
+            .Where(s => s.Container == Container.Mp4
+                        && s.AudioCodec.StartsWith("mp4a", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var audio = aac
+            .OrderByDescending(s => s.AudioCodec.Equals("mp4a.40.2", StringComparison.OrdinalIgnoreCase)) // AAC-LC first
+            .ThenByDescending(s => s.Bitrate)
+            .FirstOrDefault();
+
+        if (video != null && audio != null) return (video, audio);
+
+        var muxed = manifest.GetMuxedStreams().Where(s => s.Container == Container.Mp4).ToList();
+        if (muxed.Count > 0) return (muxed.GetWithHighestVideoQuality(), null);
+
+        throw new InvalidOperationException(
+            "YouTube offers no H.264 video with AAC audio for this video, so it can't be saved as an MP4 here.");
+    }
+
+    private static IProgress<double>? Scaled(IProgress<double>? progress, double start, double share) =>
+        progress is null ? null : new ScaledProgress(progress, start, share);
+
+    /// <summary>
+    /// Maps 0..1 progress of one step onto its slice of the overall 0..1, and only passes on
+    /// changes of at least 0.2 % (a 1080p download otherwise sends thousands of UI updates).
+    /// </summary>
+    private sealed class ScaledProgress : IProgress<double>
+    {
+        private readonly IProgress<double> _inner;
+        private readonly double _start, _share;
+        private double _last = -1;
+
+        public ScaledProgress(IProgress<double> inner, double start, double share)
+        {
+            _inner = inner;
+            _start = start;
+            _share = share;
+        }
+
+        public void Report(double value)
+        {
+            double v = Math.Clamp(value, 0, 1);
+            if (v < 1 && v - _last < 0.002) return;
+            _last = v;
+            _inner.Report(_start + v * _share);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Temp leftovers are harmless; the OS clears the temp folder eventually.
+        }
     }
 
     private static IStreamInfo SelectAudioStream(StreamManifest manifest)

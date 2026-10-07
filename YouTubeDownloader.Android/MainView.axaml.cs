@@ -264,7 +264,10 @@ public partial class MainView : UserControl
         var progress = new Progress<double>(p => Dispatcher.UIThread.Post(() =>
         {
             DownloadProgressBar.Value = p * 100;
-            StatusText.Text = $"Downloading… {p:P0}";
+            // Video downloads spend their last 5 % merging the video and audio streams.
+            StatusText.Text = kind == DownloadKind.Video && p >= 0.95 && p < 1
+                ? $"Merging video and audio… {p:P0}"
+                : $"Downloading… {p:P0}";
         }));
 
         try

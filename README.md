@@ -124,8 +124,9 @@ Saved files land in the app's **Documents/Downloads** folder, visible in the **F
 Phones can't run yt-dlp or ffmpeg, so the Android and iOS apps extract YouTube streams natively in C# (via [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)). That means:
 
 - ✅ **Search** works the same as on desktop.
-- ✅ **Audio-only M4A** (AAC) downloads work.
-- ❌ **Video downloads currently fail.** The phone apps can only save single-file MP4 streams (video and audio already combined), and YouTube has stopped serving those. Separate video and audio streams would need merging on the device, which these builds can't do yet.
+- ✅ **Video** downloads as MP4, up to **1080p**. YouTube serves video and audio as separate streams; the app downloads an H.264 video stream and an AAC audio stream and merges them into one MP4 on the phone, with its own small MP4 muxer (no ffmpeg, no re-encoding). H.264 is used because it plays in iPhone Photos and Android galleries, unlike YouTube's VP9/AV1 streams.
+- ✅ **Audio-only M4A** (AAC) downloads.
+- ❌ No 1440p/4K on the phone apps: YouTube only offers those as VP9/AV1, not H.264.
 - ❌ No channel/playlist bulk download on the phone apps.
 
 The **desktop** builds keep the full yt-dlp + ffmpeg engine with every quality option.
@@ -197,7 +198,7 @@ Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitH
 | Project | Target | Purpose |
 |---------|--------|---------|
 | `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg, search via Core) |
-| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube search and extraction (shared) |
+| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube search, extraction and MP4 merging (shared) |
 | `YouTubeDownloader.iOS` | `net8.0-ios` (Avalonia) | iOS app head, builds the IPA |
 | `YouTubeDownloader.Android` | `net8.0-android` (Avalonia) | Android app head, builds the APK |
 
