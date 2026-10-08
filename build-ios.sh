@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with the .NET 10 SDK,
-# the .NET iOS workload, and Xcode 26.
+# the .NET iOS workload, and Xcode 26 or newer.
 #
 #   dotnet workload install ios
 #   ./build-ios.sh
 #
 # The app targets the iOS 26.0 SDK pack, which .NET normally only accepts with Xcode
-# 26.0.x (CI selects exactly that). With another Xcode 26 this script turns that check off;
-# set DEVELOPER_DIR to pick an Xcode without changing the system-wide one.
+# 26.0.x (CI selects exactly that). With a newer Xcode this script turns that check off
+# (checked with Xcode 27.0); set DEVELOPER_DIR to pick an Xcode without changing the
+# system-wide one.
 #
 # Output: dist/YouTubeDownloader-ios.ipa
 # Sideload it with AltStore or Sideloadly, which re-sign with your Apple ID.
@@ -24,11 +25,11 @@ XCODE_VERSION="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
 EXTRA=()
 case "$XCODE_VERSION" in
     26.0|26.0.*) ;;
-    26.*)
+    2[6-9].*|[3-9][0-9].*)
         echo "Note: Xcode $XCODE_VERSION, not 26.0; building without .NET's Xcode version check."
         EXTRA+=(-p:ValidateXcodeVersion=false) ;;
     *)
-        echo "ERROR: Xcode 26 is needed; this is Xcode $XCODE_VERSION."
+        echo "ERROR: Xcode 26 or newer is needed; this is Xcode $XCODE_VERSION."
         exit 1 ;;
 esac
 
