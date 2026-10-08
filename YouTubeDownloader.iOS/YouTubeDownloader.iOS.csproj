@@ -29,13 +29,35 @@
     <ProjectReference Include="..\YouTubeDownloader.Core\YouTubeDownloader.Core.csproj" />
   </ItemGroup>
 
-  <!-- Keep all of YoutubeExplode. Version 6.6 bundles its helper libraries (PowerKit,
-       polyfills) into its own DLL and the result has types with duplicate names. The iOS
-       trimmer's "Collect Unmarked Members" step records every type it removes by assembly
-       and name, so removing two same-named types crashes it (MT2231). Kept whole, none of
-       its types are removed; everything else is still trimmed. -->
-  <ItemGroup>
-    <TrimmerRootAssembly Include="YoutubeExplode" />
-  </ItemGroup>
+  <!-- Trim a copy of YoutubeExplode without duplicate type names. Version 6.6 merges its
+       helper libraries (PowerKit, AngleSharp, polyfills) into its own DLL, and the merge
+       leaves types with the same full name. The iOS trimmer's "Collect Unmarked Members"
+       step runs before marking and records every type by assembly and full name, so the
+       first repeat crashes it (MT2231), whatever is rooted. tools/DedupeTypeNames renames
+       the repeats (all internal or compiler-generated) and the copy replaces the original
+       in the publish list, the supported way to change the trimmer's inputs. -->
+  <PropertyGroup>
+    <_DedupeToolProject>$(MSBuildThisFileDirectory)../tools/DedupeTypeNames/DedupeTypeNames.csproj</_DedupeToolProject>
+    <_DedupeTool>$(MSBuildThisFileDirectory)../tools/DedupeTypeNames/bin/Release/net10.0/DedupeTypeNames.dll</_DedupeTool>
+    <_DedupedYoutubeExplode>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)deduped/YoutubeExplode.dll</_DedupedYoutubeExplode>
+    <_DotnetExe Condition="'$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</_DotnetExe>
+    <_DotnetExe Condition="'$(_DotnetExe)' == ''">dotnet</_DotnetExe>
+  </PropertyGroup>
+
+  <Target Name="TrimDedupedYoutubeExplode" BeforeTargets="_ComputeManagedAssemblyToLink">
+    <ItemGroup>
+      <_YoutubeExplodeOriginal Include="@(ResolvedFileToPublish)"
+                               Condition="'%(Filename)%(Extension)' == 'YoutubeExplode.dll'" />
+    </ItemGroup>
+    <!-- A separate build of the tool: clear the variables the outer build sets for itself. -->
+    <Exec Condition="'@(_YoutubeExplodeOriginal)' != ''"
+          Command="env -u MSBuildExtensionsPath -u MSBuildSDKsPath -u MSBUILD_EXE_PATH &quot;$(_DotnetExe)&quot; build &quot;$(_DedupeToolProject)&quot; -c Release -nologo -v:q" />
+    <Exec Condition="'@(_YoutubeExplodeOriginal)' != ''"
+          Command="&quot;$(_DotnetExe)&quot; &quot;$(_DedupeTool)&quot; &quot;%(_YoutubeExplodeOriginal.FullPath)&quot; &quot;$(_DedupedYoutubeExplode)&quot;" />
+    <ItemGroup Condition="'@(_YoutubeExplodeOriginal)' != ''">
+      <ResolvedFileToPublish Remove="@(_YoutubeExplodeOriginal)" />
+      <ResolvedFileToPublish Include="@(_YoutubeExplodeOriginal->'$(_DedupedYoutubeExplode)')" />
+    </ItemGroup>
+  </Target>
 
 </Project>
