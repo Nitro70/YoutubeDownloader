@@ -174,14 +174,14 @@ Videos save to a `videos` folder next to the binary (or wherever you choose in t
 
 ### Building the iOS IPA
 
-The IPA **can only be built on macOS** (it needs Xcode's iOS SDK; there is no Windows path). On a Mac with **Xcode 26**, the **.NET 10 SDK** and the .NET iOS workload:
+The IPA **can only be built on macOS** (it needs Xcode's iOS SDK; there is no Windows path). On a Mac with **Xcode 26 or newer**, the **.NET 10 SDK** and the .NET iOS workload:
 
 ```bash
 dotnet workload install ios
 ./build-ios.sh
 ```
 
-This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly. The app targets the iOS 26.0 SDK, which .NET pairs with Xcode 26.0; with another Xcode 26 the script builds anyway and says so. No Mac? Use the CI route below.
+This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly. The app targets the iOS 26.0 SDK, which .NET pairs with Xcode 26.0; with a newer Xcode (tested with 27.0) the script builds anyway and says so. If a rebuild crashes at launch with "Failed to load AOT module", delete `YouTubeDownloader.iOS/bin` and `obj` and build again: the iOS SDK's incremental build can leave stale precompiled code. No Mac? Use the CI route below.
 
 ### Building the Android APK
 
