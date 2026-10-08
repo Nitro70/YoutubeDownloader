@@ -129,8 +129,21 @@ jobs:
       - name: Install iOS workload
         run: |
           dotnet --version
-          xcodebuild -version
           dotnet workload install ios
+
+      # The app builds against the iOS 26.0 SDK pack (see the csproj), which .NET only
+      # accepts with Xcode 26.0.x. The image defaults to a newer 26.x. Real directories
+      # only: the image also has symlink aliases (Xcode_26.0.app), and clang/SDK lookups
+      # fail through those.
+      - name: Select Xcode 26.0
+        run: |
+          set -e
+          XCODE=$(find /Applications -maxdepth 1 -type d -name 'Xcode_26.0*.app' | sort -V | tail -1)
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun -f clang
 
       # Release trims, so the AOT compile only covers code the app uses.
       - name: Build app bundle (unsigned, device arm64, full AOT)

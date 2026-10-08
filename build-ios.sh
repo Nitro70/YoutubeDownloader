@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with the .NET 10 SDK,
-# the .NET iOS workload, and the Xcode 26 version that workload asks for.
+# the .NET iOS workload, and Xcode 26.0.x selected (the app targets the iOS 26.0 SDK
+# pack, which .NET only accepts with Xcode 26.0; see xcode-select).
 #
 #   dotnet workload install ios
 #   ./build-ios.sh
