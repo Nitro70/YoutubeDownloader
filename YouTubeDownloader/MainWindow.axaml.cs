@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -76,7 +77,7 @@ public partial class MainWindow : Window
         {
             var clipboard = Clipboard;
             if (clipboard == null) return;
-            string? text = await clipboard.GetTextAsync();
+            string? text = await clipboard.TryGetTextAsync();
             if (string.IsNullOrWhiteSpace(text)) return;
             text = text.Trim();
             if (text.Length < 2048 &&
@@ -162,7 +163,7 @@ public partial class MainWindow : Window
         {
             var clipboard = Clipboard;
             if (clipboard == null) return;
-            string? text = await clipboard.GetTextAsync();
+            string? text = await clipboard.TryGetTextAsync();
             if (!string.IsNullOrEmpty(text)) UrlTextBox.Text = text;
         }
         catch

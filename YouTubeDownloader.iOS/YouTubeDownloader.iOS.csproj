@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-ios</TargetFramework>
+    <TargetFramework>net10.0-ios</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -12,17 +12,17 @@
 
     <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
          runtime; that is what makes a sideloaded build run on a stock iPhone.
-         No trimming (None, not SdkOnly): YoutubeExplode 6.6+ ships C# extension-member
-         polyfills that crash the .NET 8 iOS linker's "Collect Unmarked Members" step,
-         which only runs when something is trimmed. Costs IPA size, not behaviour. -->
-    <MtouchLink Condition="'$(Configuration)' == 'Release'">None</MtouchLink>
+         Release trims (the default), which is what keeps that AOT compile short. On
+         .NET 8 this had to be off: YoutubeExplode 6.6's net7.0 build carries C# 14
+         extension-member polyfills that crashed the .NET 8 iOS linker. Its net10.0
+         build has none. -->
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.2.3" />
-    <PackageReference Include="Avalonia.iOS" Version="11.2.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.iOS" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
   </ItemGroup>
 
   <ItemGroup>

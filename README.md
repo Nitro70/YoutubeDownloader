@@ -2,7 +2,7 @@
 
 A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (and CLI) wrapping [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). On **Android and iPhone/iPad** it's a native app that does YouTube extraction in pure C# (mobile OSes can't run yt-dlp/ffmpeg as subprocesses). Every version can **search YouTube**, so you don't need a link.
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![Android](https://img.shields.io/badge/Android-sideload-green) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple) ![Windows](https://img.shields.io/badge/Windows-supported-blue) ![Linux](https://img.shields.io/badge/Linux-supported-orange) ![Android](https://img.shields.io/badge/Android-sideload-green) ![iOS](https://img.shields.io/badge/iOS-sideload-black) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -136,7 +136,7 @@ The **desktop** builds keep the full yt-dlp + ffmpeg engine with every quality o
 
 ## Requirements (Building from Source)
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - `curl` and `unzip`/`tar` to pull bundled tool binaries
 - Windows or Linux (you can cross-compile both targets from either host)
 
@@ -183,14 +183,14 @@ This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStor
 
 ### Building the Android APK
 
-Builds on any OS with the **.NET 8 SDK**, the Android workload, and an Android SDK (API 34 + build-tools 34) + JDK:
+Builds on any OS with the **.NET 10 SDK**, the Android workload, and an Android SDK (API 36 + build-tools 36) + JDK:
 
 ```bash
 dotnet workload install android
 ./build-android.sh
 ```
 
-This produces a self-signed `dist/YouTubeDownloader-android.apk`. Use the .NET 8 SDK specifically: a newer SDK currently mis-resolves the `net8.0-android` platform version.
+This produces a self-signed `dist/YouTubeDownloader-android.apk`. It takes about half a minute.
 
 ### Everything at once, via CI
 
@@ -200,10 +200,10 @@ Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitH
 
 | Project | Target | Purpose |
 |---------|--------|---------|
-| `YouTubeDownloader` | `net8.0` (Avalonia) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg, search via Core) |
-| `YouTubeDownloader.Core` | `net8.0` | Native C# YouTube search, extraction and MP4 merging (shared) |
-| `YouTubeDownloader.iOS` | `net8.0-ios` (Avalonia) | iOS app head, builds the IPA |
-| `YouTubeDownloader.Android` | `net8.0-android` (Avalonia) | Android app head, builds the APK |
+| `YouTubeDownloader` | `net10.0` (Avalonia 12) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg, search via Core) |
+| `YouTubeDownloader.Core` | `net10.0` | Native C# YouTube search, extraction and MP4 merging (shared) |
+| `YouTubeDownloader.iOS` | `net10.0-ios` (Avalonia 12) | iOS app head, builds the IPA |
+| `YouTubeDownloader.Android` | `net10.0-android` (Avalonia 12) | Android app head, builds the APK |
 
 ## Cookies (Optional)
 

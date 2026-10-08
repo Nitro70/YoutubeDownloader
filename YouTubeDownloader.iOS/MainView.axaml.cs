@@ -1,6 +1,7 @@
 using System.Net.Http;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -67,7 +68,7 @@ public partial class MainView : UserControl
         {
             var clip = Top?.Clipboard;
             if (clip == null) return;
-            string? text = await clip.GetTextAsync();
+            string? text = await clip.TryGetTextAsync();
             if (!string.IsNullOrWhiteSpace(text)) UrlTextBox.Text = text.Trim();
         }
         catch

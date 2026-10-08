@@ -2,10 +2,8 @@
 # Build a self-signed Android APK for sideloading.
 #
 # Requirements:
-#   * .NET 8 SDK (the app targets net8.0-android; a newer SDK mis-resolves the
-#     platform version; pin 8.0 via global.json if your default is newer).
-#   * Android workload:  dotnet workload install android
-#   * An Android SDK (ANDROID_HOME) with platform 34 + build-tools 34, and a JDK.
+#   * .NET 10 SDK and the Android workload:  dotnet workload install android
+#   * An Android SDK (ANDROID_HOME) with platform 36 + build-tools 36, and a JDK.
 #
 # Output: dist/YouTubeDownloader-android.apk
 # Install: enable "install unknown apps" on the device, then open the APK.
@@ -24,7 +22,7 @@ fi
 
 echo "Building signed APK..."
 dotnet build "$PROJ" \
-    -c Release -f net8.0-android \
+    -c Release -f net10.0-android \
     -p:AndroidPackageFormat=apk \
     -p:AndroidKeyStore=true \
     -p:AndroidSigningKeyStore="$PWD/$KS" \

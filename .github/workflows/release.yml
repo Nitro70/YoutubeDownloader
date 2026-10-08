@@ -20,7 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Fetch Windows tools (yt-dlp + ffmpeg)
         shell: pwsh
@@ -64,7 +69,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Fetch Linux tools (yt-dlp + static ffmpeg)
         run: |
@@ -102,56 +112,33 @@ jobs:
   # Unsigned IPA. Sideloaders (AltStore / Sideloadly) re-sign with the
   # installer's own Apple ID, so we deliberately skip code signing here.
   ios:
-    runs-on: macos-15
+    runs-on: macos-26
     # Best-effort: if the iOS build needs a tweak, Windows + Linux still ship.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-
-      # The macOS runner defaults to a newer SDK whose iOS workload ships
-      # net9/net10 packs and flags net8.0-ios as EOL. Pin to the .NET 8 SDK
-      # so its iOS workload (net8 / iOS 17 SDK) matches Avalonia.iOS 11.2.3
-      # (net8.0-ios17.0).
-      - name: Pin .NET 8 SDK
-        run: |
-          cat > global.json <<'JSON'
-          {
-            "sdk": {
-              "version": "8.0.0",
-              "rollForward": "latestFeature"
-            }
-          }
-          JSON
-          dotnet --version
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Install iOS workload
-        run: dotnet workload install ios
-
-      # The .NET 8 iOS workload is built against the iOS 18 SDK, so an untrimmed
-      # build needs Xcode 16. Pick the newest 16.x on the runner explicitly.
-      # Real directories only: the image also has symlink aliases such as
-      # Xcode_16.4.0.app, and clang/SDK lookups fail through those.
-      - name: Select Xcode 16
         run: |
-          set -e
-          XCODE=$(find /Applications -maxdepth 1 -type d -name 'Xcode_16*.app' | sort -V | tail -1)
-          echo "Using $XCODE"
-          sudo xcode-select -s "$XCODE/Contents/Developer"
+          dotnet --version
           xcodebuild -version
-          xcrun --sdk iphoneos --show-sdk-path
-          xcrun --sdk macosx --show-sdk-path
-          xcrun -f clang
+          dotnet workload install ios
 
+      # Release trims, so the AOT compile only covers code the app uses.
       - name: Build app bundle (unsigned, device arm64, full AOT)
         run: >
           dotnet publish YouTubeDownloader.iOS/YouTubeDownloader.iOS.csproj
-          -c Release -f net8.0-ios -r ios-arm64
+          -c Release -f net10.0-ios -r ios-arm64
           -p:EnableCodeSigning=false
           -p:CodesignKey=
-          -p:MtouchLink=None
           -o ios-out
 
       - name: Collect unsigned IPA
@@ -189,29 +176,20 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-
-      # The runner's default SDK mis-resolves net8.0-android's platform
-      # version; pin the .NET 8 SDK so its Android workload builds it correctly.
-      - name: Pin .NET 8 SDK
-        run: |
-          cat > global.json <<'JSON'
-          {
-            "sdk": {
-              "version": "8.0.0",
-              "rollForward": "latestFeature"
-            }
-          }
-          JSON
-          dotnet --version
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Install Android workload
         run: dotnet workload install android
 
-      - name: Ensure Android API 34 platform
+      - name: Ensure Android API 36 platform
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-34" "build-tools;34.0.0" >/dev/null 2>&1 || true
+            "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
       - name: Generate a self-signed keystore
         run: |
@@ -225,7 +203,7 @@ jobs:
       - name: Build signed APK
         run: >
           dotnet build YouTubeDownloader.Android/YouTubeDownloader.Android.csproj
-          -c Release -f net8.0-android
+          -c Release -f net10.0-android
           -p:AndroidPackageFormat=apk
           -p:AndroidKeyStore=true
           -p:AndroidSigningKeyStore=$GITHUB_WORKSPACE/app.keystore
@@ -260,7 +238,8 @@ jobs:
           if ! grep -q "^launchable-activity:" badging.txt; then
             echo "::error::APK has no launcher activity, so it could not be opened"; exit 1
           fi
-          if ! unzip -p YouTubeDownloader-android.apk assemblies/assemblies.manifest | grep -q "YouTubeDownloader.Android"; then
+          # .NET 10 packs the assemblies into lib/<abi>/libassembly-store.so.
+          if ! unzip -p YouTubeDownloader-android.apk 'lib/arm64-v8a/libassembly-store.so' | grep -aq "YouTubeDownloader.Android"; then
             echo "::error::APK is missing the app's own assembly"; exit 1
           fi
           echo "APK has its launcher activity and the app assembly."

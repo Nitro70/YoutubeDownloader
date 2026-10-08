@@ -7,7 +7,7 @@ echo.
 dotnet --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: .NET SDK not found!
-    echo Please install .NET 8 SDK from: https://dotnet.microsoft.com/download/dotnet/8.0
+    echo Please install .NET 10 SDK from: https://dotnet.microsoft.com/download/dotnet/10.0
     pause
     exit /b 1
 )

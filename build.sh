@@ -8,7 +8,7 @@ echo
 
 if ! command -v dotnet >/dev/null 2>&1; then
     echo "ERROR: .NET SDK not found."
-    echo "Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0"
+    echo "Install .NET 10 SDK: https://dotnet.microsoft.com/download/dotnet/10.0"
     exit 1
 fi
 

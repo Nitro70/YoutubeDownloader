@@ -14,10 +14,11 @@ public partial class App : Avalonia.Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Android runs as a single-view application.
-        if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        // Android can create more than one activity over the app's life, so Avalonia 12
+        // asks for a way to make the view rather than a single view.
+        if (ApplicationLifetime is IActivityApplicationLifetime activities)
         {
-            singleView.MainView = new MainView();
+            activities.MainViewFactory = () => new MainView();
         }
 
         base.OnFrameworkInitializationCompleted();

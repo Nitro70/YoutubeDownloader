@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with Xcode 16
-# (the .NET 8 iOS workload targets the iOS 18 SDK) and the .NET iOS workload installed.
+# Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with the .NET 10 SDK,
+# the .NET iOS workload, and the Xcode 26 version that workload asks for.
 #
 #   dotnet workload install ios
 #   ./build-ios.sh
@@ -18,10 +18,9 @@ PROJ="YouTubeDownloader.iOS/YouTubeDownloader.iOS.csproj"
 
 echo "Publishing unsigned app bundle (device arm64, full AOT)..."
 dotnet publish "$PROJ" \
-    -c Release -f net8.0-ios -r ios-arm64 \
+    -c Release -f net10.0-ios -r ios-arm64 \
     -p:EnableCodeSigning=false \
     -p:CodesignKey= \
-    -p:MtouchLink=None \
     -o ios-out
 
 mkdir -p dist
