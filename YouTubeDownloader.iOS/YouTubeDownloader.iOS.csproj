@@ -15,10 +15,7 @@
 
     <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
          runtime; that is what makes a sideloaded build run on a stock iPhone.
-         Release trims (the default), which is what keeps that AOT compile short. On
-         .NET 8 this had to be off: YoutubeExplode 6.6's net7.0 build carries C# 14
-         extension-member polyfills that crashed the .NET 8 iOS linker. Its net10.0
-         build has none. -->
+         Release trims (the default), which is what keeps that AOT compile short. -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +27,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\YouTubeDownloader.Core\YouTubeDownloader.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Keep all of YoutubeExplode. Version 6.6 bundles its helper libraries (PowerKit,
+       polyfills) into its own DLL and the result has types with duplicate names. The iOS
+       trimmer's "Collect Unmarked Members" step records every type it removes by assembly
+       and name, so removing two same-named types crashes it (MT2231). Kept whole, none of
+       its types are removed; everything else is still trimmed. -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="YoutubeExplode" />
   </ItemGroup>
 
 </Project>
