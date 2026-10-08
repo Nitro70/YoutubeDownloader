@@ -18,7 +18,7 @@ PROJ="YouTubeDownloader.iOS/YouTubeDownloader.iOS.csproj"
 
 echo "Publishing unsigned app bundle (device arm64, full AOT)..."
 dotnet publish "$PROJ" \
-    -c Release -f net10.0-ios -r ios-arm64 \
+    -c Release -f net10.0-ios26.0 -r ios-arm64 \
     -p:EnableCodeSigning=false \
     -p:CodesignKey= \
     -o ios-out

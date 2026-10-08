@@ -2,7 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-ios</TargetFramework>
+    <!-- The iOS 26.0 SDK, which Avalonia.iOS 12 is built against and every Xcode 26.x can
+         build. Plain net10.0-ios follows the newest SDK in the installed workload, which can
+         need a newer Xcode (the 27.0 workload wants Xcode 27). -->
+    <TargetFramework>net10.0-ios26.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
