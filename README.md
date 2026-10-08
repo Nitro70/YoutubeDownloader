@@ -106,6 +106,8 @@ The Android build is **not on the Play Store**. It's a self-signed APK you insta
 2. Open it. Android will ask you to allow installing from this source: enable **"install unknown apps"** for your browser or file manager.
 3. Install and open.
 
+Needs Android 6.0 or newer.
+
 Saved files land in `Android/data/com.nitro70.youtubedownloader/files/Downloads`, reachable from a file manager.
 
 > The APK is signed with a throwaway key generated at build time, so a new release may not install *over* an older one. Uninstall the old version first if Android refuses the update.
@@ -172,14 +174,14 @@ Videos save to a `videos` folder next to the binary (or wherever you choose in t
 
 ### Building the iOS IPA
 
-The IPA **can only be built on macOS** (it needs Xcode's iOS SDK; there is no Windows path). On a Mac with Xcode and the .NET iOS workload:
+The IPA **can only be built on macOS** (it needs Xcode's iOS SDK; there is no Windows path). On a Mac with **Xcode 26**, the **.NET 10 SDK** and the .NET iOS workload:
 
 ```bash
 dotnet workload install ios
 ./build-ios.sh
 ```
 
-This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly. No Mac? Use the CI route below.
+This produces an **unsigned** `dist/YouTubeDownloader-ios.ipa` ready for AltStore/Sideloadly. The app targets the iOS 26.0 SDK, which .NET pairs with Xcode 26.0; with another Xcode 26 the script builds anyway and says so. No Mac? Use the CI route below.
 
 ### Building the Android APK
 
@@ -194,7 +196,7 @@ This produces a self-signed `dist/YouTubeDownloader-android.apk`. It takes about
 
 ### Everything at once, via CI
 
-Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitHub Actions workflow](.github/workflows/release.yml) builds **all four** platforms: Windows, Linux and the Android APK on their runners, the iOS IPA on a macOS runner. On a tag it also publishes them to a Release. The Android job checks that the APK really contains the app and its launcher before uploading it.
+Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitHub Actions workflow](.github/workflows/release.yml) builds **all four** platforms: Windows, Linux and the Android APK on their runners, the iOS IPA on a macOS runner. On a tag it also publishes them to a Release (a pre-release for tags like `v4.0.0-beta.1`). The Android job checks that the APK really contains the app and its launcher before uploading it. A full run takes about 10 minutes; the iOS job is the longest.
 
 ### Project layout
 

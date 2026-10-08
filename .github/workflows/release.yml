@@ -280,6 +280,8 @@ jobs:
         with:
           files: artifacts/**/*
           fail_on_unmatched_files: false
+          # v4.0.0-beta.1 and the like are test builds.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           body: |
             ## Downloads
 
