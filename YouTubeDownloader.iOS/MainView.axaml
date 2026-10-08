@@ -103,6 +103,19 @@
                         <RadioButton Name="AudioRadio" Grid.Column="2" Classes="format"
                                      GroupName="fmt" Content="🎵 Audio (M4A)"/>
                     </Grid>
+                    <!-- iPhone only: finished videos go to the Photos app. -->
+                    <Grid Name="PhotosRow" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Save videos to Photos" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" FontSize="15"/>
+                        <ToggleSwitch Name="PhotosToggle" Grid.Column="1"
+                                      OnContent="" OffContent="" MinWidth="0">
+                            <ToggleSwitch.Resources>
+                                <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#FFFF0000"/>
+                                <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#FFCC0000"/>
+                                <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#FF990000"/>
+                            </ToggleSwitch.Resources>
+                        </ToggleSwitch>
+                    </Grid>
                     <TextBlock Text="Custom filename (optional)" Classes="label" Margin="0,4,0,0"/>
                     <TextBox Name="FilenameTextBox" Classes="yt"/>
                 </StackPanel>

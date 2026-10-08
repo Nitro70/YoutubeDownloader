@@ -12,7 +12,7 @@ public static class ErrorText
 {
     public static string Describe(Exception ex) => ex switch
     {
-        HttpRequestException { StatusCode: HttpStatusCode.Forbidden } =>
+        HttpRequestException { StatusCode: HttpStatusCode.Forbidden } or StreamLinkRefusedException =>
             "YouTube refused the request (HTTP 403). Try again.",
         HttpRequestException { StatusCode: { } status } =>
             $"YouTube answered with an error (HTTP {(int)status}). Try again.",

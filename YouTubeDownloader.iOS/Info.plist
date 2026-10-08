@@ -9,9 +9,9 @@
 	<key>CFBundleDisplayName</key>
 	<string>YT Downloader</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.4.1</string>
+	<string>3.5.0</string>
 	<key>CFBundleVersion</key>
-	<string>3.4.1</string>
+	<string>3.5.0</string>
 	<key>CFBundleExecutable</key>
 	<string>YouTubeDownloader.iOS</string>
 	<key>CFBundlePackageType</key>
@@ -50,6 +50,12 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<!-- Saving finished videos to Photos. iOS 14+ asks for add-only access; on iOS 13
+	     PHPhotoLibrary asks for full access, which needs the second text. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Saves the videos you download to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Saves the videos you download to your photo library.</string>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleLightContent</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

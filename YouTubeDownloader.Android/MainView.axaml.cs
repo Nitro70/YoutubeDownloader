@@ -114,10 +114,14 @@ public partial class MainView : UserControl
         }
     }
 
-    private async Task FetchAndShowInfoAsync(string url)
+    /// <param name="quiet">
+    /// Leave the status line alone: the lookup that runs alongside a download from search
+    /// words, which must not overwrite the download's status.
+    /// </param>
+    private async Task FetchAndShowInfoAsync(string url, bool quiet = false)
     {
         FetchButton.IsEnabled = false;
-        SetStatus("Fetching info…");
+        if (!quiet) SetStatus("Fetching info…");
         try
         {
             var info = await _service.GetVideoInfoAsync(url);
@@ -125,14 +129,14 @@ public partial class MainView : UserControl
             ChannelText.Text = $"Channel: {info.Author}";
             DurationText.Text = $"Duration: {info.DurationDisplay}";
             VideoInfoPanel.IsVisible = true;
-            SetStatus("Ready");
+            if (!quiet) SetStatus("Ready");
 
             if (!string.IsNullOrEmpty(info.ThumbnailUrl))
                 await LoadThumbnailAsync(info.ThumbnailUrl);
         }
         catch (Exception ex)
         {
-            SetStatus($"Couldn't fetch: {ErrorText.Describe(ex)}");
+            if (!quiet) SetStatus($"Couldn't fetch: {ErrorText.Describe(ex)}");
         }
         finally
         {
@@ -240,7 +244,7 @@ public partial class MainView : UserControl
         var top = results[0];
         SearchResultsPanel.IsVisible = false;
         UrlTextBox.Text = top.Url;
-        _ = FetchAndShowInfoAsync(top.Url);
+        _ = FetchAndShowInfoAsync(top.Url, quiet: true);
         return top.Url;
     }
 
@@ -270,9 +274,12 @@ public partial class MainView : UserControl
                 : $"Downloading… {p:P0}";
         }));
 
+        // What it is doing until the first bytes arrive: finding the video, getting its streams.
+        var status = new Progress<string>(SetStatus);
+
         try
         {
-            string path = await _service.DownloadAsync(url, kind, _outputDirectory, customName, progress, _cts.Token);
+            string path = await _service.DownloadAsync(url, kind, _outputDirectory, customName, progress, status, _cts.Token);
             DownloadProgressBar.Value = 100;
             SetStatus($"Saved: {Path.GetFileName(path)}");
         }

@@ -117,7 +117,9 @@ The iOS build is **not on the App Store** and is **unsigned**: you sideload it y
 - **[AltStore](https://altstore.io/):** install AltServer on a PC/Mac, then install the IPA to your device over Wi-Fi. A free Apple ID works (the app must be refreshed every 7 days).
 - **[Sideloadly](https://sideloadly.io/):** plug the device into a PC/Mac, drag in the IPA, sign in with your Apple ID.
 
-Saved files land in the app's **Documents/Downloads** folder, visible in the **Files** app under "YT Downloader", from where you can move them into Photos or share them.
+Videos go straight into the **Photos** app (the **Save videos to Photos** switch, on by default; iOS asks once for permission to add photos). Audio files, and videos when the switch is off, land in the app's **Documents/Downloads** folder, visible in the **Files** app under "YT Downloader".
+
+**[LiveContainer](https://github.com/LiveContainer/LiveContainer)** works too. Saving to Photos works in its normal mode. In its multitasking mode the switch is hidden, because LiveContainer's multitasking process has no photo permission and iOS would close the app if it asked; files are then kept inside LiveContainer's data.
 
 ## What the phone apps can and can't do
 
@@ -126,6 +128,7 @@ Phones can't run yt-dlp or ffmpeg, so the Android and iOS apps extract YouTube s
 - ✅ **Search** works the same as on desktop.
 - ✅ **Video** downloads as MP4, up to **1080p**. YouTube serves video and audio as separate streams; the app downloads an H.264 video stream and an AAC audio stream and merges them into one MP4 on the phone, with its own small MP4 muxer (no ffmpeg, no re-encoding). H.264 is used because it plays in iPhone Photos and Android galleries, unlike YouTube's VP9/AV1 streams.
 - ✅ **Audio-only M4A** (AAC) downloads.
+- ✅ **iPhone: videos saved straight to Photos** (can be switched off).
 - ❌ No 1440p/4K on the phone apps: YouTube only offers those as VP9/AV1, not H.264.
 - ❌ No channel/playlist bulk download on the phone apps.
 

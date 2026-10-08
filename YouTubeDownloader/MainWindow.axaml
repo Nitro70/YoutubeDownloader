@@ -249,7 +249,7 @@
 
         <!-- Footer -->
         <Border Grid.Row="2" Background="{DynamicResource BgSecondaryBrush}">
-            <TextBlock Text="Powered by yt-dlp &amp; FFmpeg  •  YouTube Downloader v3.4"
+            <TextBlock Text="Powered by yt-dlp &amp; FFmpeg  •  YouTube Downloader v3.5"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        FontSize="11"
                        HorizontalAlignment="Center"

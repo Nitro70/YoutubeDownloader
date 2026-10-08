@@ -21,14 +21,15 @@ public sealed class YouTubeService
     // One connection pool for every client, with cookies off at this level: YoutubeExplode
     // keeps each client's cookies itself. Its default HttpClient has a shared cookie jar, which
     // made every new client come back as the same visitor. The same handler on every platform;
-    // the phones' native handlers compressed by default, so this asks for it.
-    private static readonly HttpClient Http = new(new SocketsHttpHandler
+    // the phones' native handlers compressed by default, so this asks for it. RefusedLinkHandler
+    // turns a refused stream link into an exception YoutubeExplode doesn't retry.
+    private static readonly HttpClient Http = new(new RefusedLinkHandler(new SocketsHttpHandler
     {
         UseCookies = false,
         AutomaticDecompression = DecompressionMethods.All,
         ConnectTimeout = TimeSpan.FromSeconds(15),
         PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-    });
+    }));
 
     // Each YoutubeClient is one anonymous YouTube visitor. YouTube decides per visitor whether
     // the stream links it hands out work: for some visitors (an experiment, seen as fexp
@@ -39,12 +40,17 @@ public sealed class YouTubeService
     /// <summary>How many visitors to try before giving up on a 403.</summary>
     private const int MaxVisitors = 5;
 
+    // The last video looked up, so a download right after GetVideoInfoAsync, or alongside it,
+    // doesn't fetch the same watch page (about 1 MB) again. The task is kept, not the result,
+    // so a lookup still running is shared.
+    private (VideoId Id, Task<Video> Lookup)? _lastVideo;
+
     /// <summary>Tallest video to download, in pixels. H.264 on YouTube rarely goes above 1080.</summary>
     public int MaxVideoHeight { get; set; } = 1080;
 
     public async Task<VideoInfo> GetVideoInfoAsync(string url, CancellationToken ct = default)
     {
-        var video = await _youtube.Videos.GetAsync(url, ct);
+        var video = await GetVideoAsync(url, ct);
         string? thumb = video.Thumbnails.Count > 0
             ? video.Thumbnails.GetWithHighestResolution().Url
             : null;
@@ -87,16 +93,22 @@ public sealed class YouTubeService
     /// Optional base filename (no extension). When null/empty the video title is used.
     /// The extension is chosen from the selected stream's container.
     /// </param>
+    /// <param name="status">
+    /// What it is doing before the download starts, as a short line for the user.
+    /// </param>
     public async Task<string> DownloadAsync(
         string url,
         DownloadKind kind,
         string outputDirectory,
         string? customName = null,
         IProgress<double>? progress = null,
+        IProgress<string>? status = null,
         CancellationToken ct = default)
     {
-        var video = await _youtube.Videos.GetAsync(url, ct);
-        var manifest = await FetchManifestAsync(video.Id, ct);
+        status?.Report("Finding the video…");
+        var video = await GetVideoAsync(url, ct);
+        status?.Report("Getting the video's streams…");
+        var manifest = await FetchManifestAsync(video.Id, status, ct);
 
         string baseName = string.IsNullOrWhiteSpace(customName)
             ? Sanitize(video.Title)
@@ -147,12 +159,25 @@ public sealed class YouTubeService
         }
     }
 
+    private Task<Video> GetVideoAsync(string url, CancellationToken ct)
+    {
+        var id = VideoId.Parse(url);
+        if (_lastVideo is not { } last || last.Id != id || last.Lookup.IsFaulted || last.Lookup.IsCanceled)
+        {
+            // Not cancelled with the caller: someone else may be waiting for the same lookup.
+            last = (id, _youtube.Videos.GetAsync(id, CancellationToken.None).AsTask());
+            _lastVideo = last;
+        }
+        return last.Lookup.WaitAsync(ct);
+    }
+
     /// <summary>
     /// Fetches the stream list, starting over as a new visitor each time YouTube answers 403.
     /// The visitor is baked into the stream links (googlevideo gets no cookies), so any client
     /// can download them afterwards.
     /// </summary>
-    private async Task<StreamManifest> FetchManifestAsync(VideoId videoId, CancellationToken ct)
+    private async Task<StreamManifest> FetchManifestAsync(
+        VideoId videoId, IProgress<string>? status, CancellationToken ct)
     {
         for (int visitor = 1; ; visitor++)
         {
@@ -161,13 +186,15 @@ public sealed class YouTubeService
             {
                 return await youtube.Videos.Streams.GetManifestAsync(videoId, ct);
             }
-            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+            catch (Exception ex) when (ex is StreamLinkRefusedException
+                                       || ex is HttpRequestException { StatusCode: HttpStatusCode.Forbidden })
             {
                 // Replace it unless another call already has, also when giving up, so that
                 // trying again starts as a new visitor. The old client is dropped, not
                 // disposed: a search may still be using it.
                 Interlocked.CompareExchange(ref _youtube, new YoutubeClient(Http), youtube);
                 if (visitor >= MaxVisitors) throw;
+                status?.Report($"YouTube turned this session away, trying a new one ({visitor + 1} of {MaxVisitors})…");
             }
         }
     }

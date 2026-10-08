@@ -26,6 +26,14 @@ public partial class MainView : UserControl
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "Downloads");
         Directory.CreateDirectory(_outputDirectory);
+
+        // Finished videos can go straight to the Photos app, except in LiveContainer's
+        // multitasking mode (see PhotoLibrary.IsAvailable). The handler is attached after
+        // setting the switch, so a launch where it's hidden doesn't overwrite the saved choice.
+        PhotosRow.IsVisible = PhotoLibrary.IsAvailable;
+        PhotosToggle.IsChecked = PhotoLibrary.IsAvailable && PhotoLibrary.SaveVideos;
+        PhotosToggle.IsCheckedChanged += PhotosToggle_IsCheckedChanged;
+        UpdateHint();
     }
 
     private TopLevel? Top => TopLevel.GetTopLevel(this);
@@ -93,10 +101,14 @@ public partial class MainView : UserControl
         }
     }
 
-    private async Task FetchAndShowInfoAsync(string url)
+    /// <param name="quiet">
+    /// Leave the status line alone: the lookup that runs alongside a download from search
+    /// words, which must not overwrite the download's status.
+    /// </param>
+    private async Task FetchAndShowInfoAsync(string url, bool quiet = false)
     {
         FetchButton.IsEnabled = false;
-        SetStatus("Fetching info…");
+        if (!quiet) SetStatus("Fetching info…");
         try
         {
             var info = await _service.GetVideoInfoAsync(url);
@@ -104,14 +116,14 @@ public partial class MainView : UserControl
             ChannelText.Text = $"Channel: {info.Author}";
             DurationText.Text = $"Duration: {info.DurationDisplay}";
             VideoInfoPanel.IsVisible = true;
-            SetStatus("Ready");
+            if (!quiet) SetStatus("Ready");
 
             if (!string.IsNullOrEmpty(info.ThumbnailUrl))
                 await LoadThumbnailAsync(info.ThumbnailUrl);
         }
         catch (Exception ex)
         {
-            SetStatus($"Couldn't fetch: {ErrorText.Describe(ex)}");
+            if (!quiet) SetStatus($"Couldn't fetch: {ErrorText.Describe(ex)}");
         }
         finally
         {
@@ -219,7 +231,7 @@ public partial class MainView : UserControl
         var top = results[0];
         SearchResultsPanel.IsVisible = false;
         UrlTextBox.Text = top.Url;
-        _ = FetchAndShowInfoAsync(top.Url);
+        _ = FetchAndShowInfoAsync(top.Url, quiet: true);
         return top.Url;
     }
 
@@ -249,11 +261,20 @@ public partial class MainView : UserControl
                 : $"Downloading… {p:P0}";
         }));
 
+        // What it is doing until the first bytes arrive: finding the video, getting its streams.
+        var status = new Progress<string>(SetStatus);
+
         try
         {
-            string path = await _service.DownloadAsync(url, kind, _outputDirectory, customName, progress, _cts.Token);
+            string path = await _service.DownloadAsync(url, kind, _outputDirectory, customName, progress, status, _cts.Token);
             DownloadProgressBar.Value = 100;
-            SetStatus($"Saved: {Path.GetFileName(path)}");
+            if (kind == DownloadKind.Video && PhotosRow.IsVisible && PhotosToggle.IsChecked == true)
+            {
+                CancelButton.IsVisible = false; // nothing left to cancel
+                await SaveToPhotosAsync(path);
+            }
+            else
+                SetStatus($"Saved: {Path.GetFileName(path)}");
         }
         catch (OperationCanceledException) when (_cts?.IsCancellationRequested == true)
         {
@@ -271,6 +292,47 @@ public partial class MainView : UserControl
             DownloadButton.IsVisible = true;
             CancelButton.IsVisible = false;
         }
+    }
+
+    /// <summary>Moves a finished video into Photos: the app's copy goes once Photos has it.</summary>
+    private async Task SaveToPhotosAsync(string path)
+    {
+        SetStatus("Adding to Photos…");
+        string? problem;
+        try
+        {
+            problem = await PhotoLibrary.TrySaveVideoAsync(path);
+        }
+        catch (Exception ex)
+        {
+            problem = ErrorText.Describe(ex);
+        }
+
+        if (problem is null)
+        {
+            try { File.Delete(path); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            SetStatus($"Saved to Photos: {Path.GetFileNameWithoutExtension(path)}");
+        }
+        else
+        {
+            SetStatus($"Saved: {Path.GetFileName(path)}. Not added to Photos: {problem.TrimEnd('.')}.");
+        }
+    }
+
+    private void PhotosToggle_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        PhotoLibrary.SaveVideos = PhotosToggle.IsChecked == true;
+        UpdateHint();
+    }
+
+    private void UpdateHint()
+    {
+        string files = PhotoLibrary.InLiveContainer
+            ? "in the app's Downloads folder inside LiveContainer"
+            : "in the Files app under \"YT Downloader\"";
+        HintText.Text = PhotosToggle.IsChecked == true
+            ? $"Videos go to the Photos app. Audio files are saved {files}."
+            : $"Saved files appear {files}.";
     }
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e)
