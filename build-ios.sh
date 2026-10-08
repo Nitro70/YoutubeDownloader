@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Build an UNSIGNED iOS IPA for sideloading. Must run on macOS with the .NET 10 SDK,
-# the .NET iOS workload, and Xcode 26.0.x selected (the app targets the iOS 26.0 SDK
-# pack, which .NET only accepts with Xcode 26.0; see xcode-select).
+# the .NET iOS workload, and Xcode 26.
 #
 #   dotnet workload install ios
 #   ./build-ios.sh
+#
+# The app targets the iOS 26.0 SDK pack, which .NET normally only accepts with Xcode
+# 26.0.x (CI selects exactly that). With another Xcode 26 this script turns that check off;
+# set DEVELOPER_DIR to pick an Xcode without changing the system-wide one.
 #
 # Output: dist/YouTubeDownloader-ios.ipa
 # Sideload it with AltStore or Sideloadly, which re-sign with your Apple ID.
@@ -17,11 +20,24 @@ fi
 
 PROJ="YouTubeDownloader.iOS/YouTubeDownloader.iOS.csproj"
 
+XCODE_VERSION="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
+EXTRA=()
+case "$XCODE_VERSION" in
+    26.0|26.0.*) ;;
+    26.*)
+        echo "Note: Xcode $XCODE_VERSION, not 26.0; building without .NET's Xcode version check."
+        EXTRA+=(-p:ValidateXcodeVersion=false) ;;
+    *)
+        echo "ERROR: Xcode 26 is needed; this is Xcode $XCODE_VERSION."
+        exit 1 ;;
+esac
+
 echo "Publishing unsigned app bundle (device arm64, full AOT)..."
 dotnet publish "$PROJ" \
     -c Release -f net10.0-ios26.0 -r ios-arm64 \
     -p:EnableCodeSigning=false \
     -p:CodesignKey= \
+    ${EXTRA[@]+"${EXTRA[@]}"} \
     -o ios-out
 
 mkdir -p dist
