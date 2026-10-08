@@ -6,7 +6,8 @@ using Mono.Cecil;
 // duplicates (two PowerKit copies, two <PrivateImplementationDetails>/__StaticArrayInitTypeSize=82,
 // and so on). The .NET iOS trimmer records types by assembly and full name and crashes on the
 // first repeat (MT2231), so the iOS build trims this copy instead. Only the repeats are renamed,
-// by adding _2, _3, ... to the name; all of them are internal or compiler-generated.
+// by adding _2, _3, ... to the name. A repeat visible outside the assembly is refused: code
+// compiled against it would still use the old name.
 //
 // usage: DedupeTypeNames <input.dll> <output.dll>
 
@@ -22,6 +23,8 @@ using (var module = ModuleDefinition.ReadModule(args[0], new ReaderParameters { 
     var seen = new HashSet<string>(StringComparer.Ordinal);
     Rename(module.Types);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(args[1]))!);
+    // The rewrite invalidates any strong-name signature; don't claim one.
+    module.Attributes &= ~ModuleAttributes.StrongNameSigned;
     module.Write(args[1]);
 
     // Parents first: once a parent is renamed, its nested types' full names are unique too.
@@ -31,6 +34,9 @@ using (var module = ModuleDefinition.ReadModule(args[0], new ReaderParameters { 
         {
             if (!seen.Add(type.FullName))
             {
+                if (IsVisible(type))
+                    throw new InvalidOperationException($"refusing to rename visible type {type.FullName}");
+
                 // Keep a generic arity suffix (`1) at the end of the name.
                 int tick = type.Name.IndexOf('`');
                 string stem = tick < 0 ? type.Name : type.Name[..tick];
@@ -49,3 +55,7 @@ using (var module = ModuleDefinition.ReadModule(args[0], new ReaderParameters { 
 
 Console.WriteLine($"DedupeTypeNames: {renamed} duplicate type name(s) renamed in {Path.GetFileName(args[0])}");
 return 0;
+
+static bool IsVisible(TypeDefinition t) => t.IsNested
+    ? (t.IsNestedPublic || t.IsNestedFamily || t.IsNestedFamilyOrAssembly) && IsVisible(t.DeclaringType)
+    : t.IsPublic;

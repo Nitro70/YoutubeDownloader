@@ -5,8 +5,10 @@
          .dll, no APK). Exe marks it as an Android application. -->
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-android</TargetFramework>
-    <!-- Android 6.0: the AndroidX libraries Avalonia 12 uses need API 23. -->
-    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <!-- Android 7.0, the oldest Avalonia 12 supports (its AndroidX libraries need 6.0). -->
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <!-- .NET 10 builds only 64-bit by default; keep 32-bit ARM for budget phones. -->
+    <RuntimeIdentifiers>android-arm;android-arm64;android-x64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>

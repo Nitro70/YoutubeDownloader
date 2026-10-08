@@ -56,6 +56,13 @@
 	<string>Saves the videos you download to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Saves the videos you download to your photo library.</string>
+	<!-- Avalonia 12 creates its window from a UIScene delegate on iOS 13+. Declare scene
+	     support (one scene; Avalonia's app delegate supplies the configuration). -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleLightContent</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>

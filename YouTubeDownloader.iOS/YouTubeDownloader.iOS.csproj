@@ -15,7 +15,8 @@
 
     <!-- Device builds (ios-arm64) full-AOT compile, so no JIT is needed at
          runtime; that is what makes a sideloaded build run on a stock iPhone.
-         Release trims (the default), which is what keeps that AOT compile short. -->
+         Release trims (the default: the .NET libraries plus libraries that declare
+         themselves trimmable, such as YoutubeExplode), which keeps that AOT compile short. -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,26 +35,40 @@
        leaves types with the same full name. The iOS trimmer's "Collect Unmarked Members"
        step runs before marking and records every type by assembly and full name, so the
        first repeat crashes it (MT2231), whatever is rooted. tools/DedupeTypeNames renames
-       the repeats (all internal or compiler-generated) and the copy replaces the original
-       in the publish list, the supported way to change the trimmer's inputs. -->
+       the repeats (it refuses to touch visible types) and the copy replaces the original in
+       the publish list, the supported way to change the trimmer's inputs. The copy is only
+       rewritten when YoutubeExplode or the tool changes, so an unchanged rebuild doesn't
+       trim and AOT-compile everything again. -->
   <PropertyGroup>
-    <_DedupeToolProject>$(MSBuildThisFileDirectory)../tools/DedupeTypeNames/DedupeTypeNames.csproj</_DedupeToolProject>
-    <_DedupeTool>$(MSBuildThisFileDirectory)../tools/DedupeTypeNames/bin/Release/net10.0/DedupeTypeNames.dll</_DedupeTool>
-    <_DedupedYoutubeExplode>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)deduped/YoutubeExplode.dll</_DedupedYoutubeExplode>
+    <_DedupeToolDir>$(MSBuildThisFileDirectory)../tools/DedupeTypeNames/</_DedupeToolDir>
     <_DotnetExe Condition="'$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</_DotnetExe>
     <_DotnetExe Condition="'$(_DotnetExe)' == ''">dotnet</_DotnetExe>
+    <!-- On macOS the tool's own build must not inherit the outer build's MSBuild paths. -->
+    <_DedupeEnv Condition="$([MSBuild]::IsOSPlatform('OSX'))">env -u MSBuildExtensionsPath -u MSBuildSDKsPath -u MSBUILD_EXE_PATH </_DedupeEnv>
   </PropertyGroup>
 
-  <Target Name="TrimDedupedYoutubeExplode" BeforeTargets="_ComputeManagedAssemblyToLink">
+  <Target Name="_FindYoutubeExplodeToDedupe">
+    <!-- Set here, not in the project body: IntermediateOutputPath is only final in targets. -->
+    <PropertyGroup>
+      <_DedupedYoutubeExplode>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)deduped/YoutubeExplode.dll</_DedupedYoutubeExplode>
+    </PropertyGroup>
     <ItemGroup>
       <_YoutubeExplodeOriginal Include="@(ResolvedFileToPublish)"
                                Condition="'%(Filename)%(Extension)' == 'YoutubeExplode.dll'" />
     </ItemGroup>
-    <!-- A separate build of the tool: clear the variables the outer build sets for itself. -->
+  </Target>
+
+  <Target Name="_DedupeYoutubeExplode"
+          DependsOnTargets="_FindYoutubeExplodeToDedupe"
+          Inputs="@(_YoutubeExplodeOriginal);$(_DedupeToolDir)Program.cs;$(_DedupeToolDir)DedupeTypeNames.csproj"
+          Outputs="$(_DedupedYoutubeExplode)">
     <Exec Condition="'@(_YoutubeExplodeOriginal)' != ''"
-          Command="env -u MSBuildExtensionsPath -u MSBuildSDKsPath -u MSBUILD_EXE_PATH &quot;$(_DotnetExe)&quot; build &quot;$(_DedupeToolProject)&quot; -c Release -nologo -v:q" />
-    <Exec Condition="'@(_YoutubeExplodeOriginal)' != ''"
-          Command="&quot;$(_DotnetExe)&quot; &quot;$(_DedupeTool)&quot; &quot;%(_YoutubeExplodeOriginal.FullPath)&quot; &quot;$(_DedupedYoutubeExplode)&quot;" />
+          Command="$(_DedupeEnv)&quot;$(_DotnetExe)&quot; run --project &quot;$(_DedupeToolDir)DedupeTypeNames.csproj&quot; -c Release -- &quot;%(_YoutubeExplodeOriginal.FullPath)&quot; &quot;$(_DedupedYoutubeExplode)&quot;" />
+  </Target>
+
+  <Target Name="UseDedupedYoutubeExplode"
+          BeforeTargets="_ComputeManagedAssemblyToLink"
+          DependsOnTargets="_DedupeYoutubeExplode">
     <ItemGroup Condition="'@(_YoutubeExplodeOriginal)' != ''">
       <ResolvedFileToPublish Remove="@(_YoutubeExplodeOriginal)" />
       <ResolvedFileToPublish Include="@(_YoutubeExplodeOriginal->'$(_DedupedYoutubeExplode)')" />

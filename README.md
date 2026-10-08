@@ -106,7 +106,7 @@ The Android build is **not on the Play Store**. It's a self-signed APK you insta
 2. Open it. Android will ask you to allow installing from this source: enable **"install unknown apps"** for your browser or file manager.
 3. Install and open.
 
-Needs Android 6.0 or newer.
+Needs Android 7.0 or newer (ARM phones, 32 or 64-bit).
 
 Saved files land in `Android/data/com.nitro70.youtubedownloader/files/Downloads`, reachable from a file manager.
 
@@ -204,7 +204,7 @@ Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitH
 |---------|--------|---------|
 | `YouTubeDownloader` | `net10.0` (Avalonia 12) | Windows/Linux desktop GUI + CLI (yt-dlp + ffmpeg, search via Core) |
 | `YouTubeDownloader.Core` | `net10.0` | Native C# YouTube search, extraction and MP4 merging (shared) |
-| `YouTubeDownloader.iOS` | `net10.0-ios` (Avalonia 12) | iOS app head, builds the IPA |
+| `YouTubeDownloader.iOS` | `net10.0-ios26.0` (Avalonia 12) | iOS app head, builds the IPA |
 | `YouTubeDownloader.Android` | `net10.0-android` (Avalonia 12) | Android app head, builds the APK |
 
 ## Cookies (Optional)

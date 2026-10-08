@@ -10,7 +10,12 @@ namespace YouTubeDownloader.Droid;
     Label = "YT Downloader",
     Theme = "@style/MyTheme.NoActionBar",
     MainLauncher = true,
-    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
+    // Handle these in place instead of recreating the activity (split screen, foldables,
+    // font size, language, keyboards).
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode
+        | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density
+        | ConfigChanges.FontScale | ConfigChanges.Locale | ConfigChanges.LayoutDirection
+        | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.Navigation)]
 public class MainActivity : AvaloniaMainActivity
 {
 }

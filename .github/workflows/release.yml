@@ -24,8 +24,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
+          key: nuget-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-${{ github.job }}-
 
       - name: Fetch Windows tools (yt-dlp + ffmpeg)
         shell: pwsh
@@ -73,8 +73,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
+          key: nuget-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-${{ github.job }}-
 
       - name: Fetch Linux tools (yt-dlp + static ffmpeg)
         run: |
@@ -123,8 +123,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
+          key: nuget-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-${{ github.job }}-
 
       - name: Install iOS workload
         run: |
@@ -145,7 +145,8 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-path
           xcrun -f clang
 
-      # Release trims, so the AOT compile only covers code the app uses.
+      # Release trims the .NET libraries and the libraries that allow it (YoutubeExplode
+      # among them), which keeps the AOT compile to a few minutes.
       - name: Build app bundle (unsigned, device arm64, full AOT)
         run: >
           dotnet publish YouTubeDownloader.iOS/YouTubeDownloader.iOS.csproj
@@ -193,8 +194,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
+          key: nuget-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-${{ github.job }}-
 
       - name: Install Android workload
         run: dotnet workload install android
@@ -255,7 +256,14 @@ jobs:
           if ! unzip -p YouTubeDownloader-android.apk 'lib/arm64-v8a/libassembly-store.so' | grep -aq "YouTubeDownloader.Android"; then
             echo "::error::APK is missing the app's own assembly"; exit 1
           fi
-          echo "APK has its launcher activity and the app assembly."
+          # Avalonia 12 starts from the Application class; without it the activity can't start.
+          if ! "$AAPT2" dump xmltree --file AndroidManifest.xml YouTubeDownloader-android.apk | grep -q 'AndroidApp"'; then
+            echo "::error::APK manifest has no AndroidApp application class"; exit 1
+          fi
+          for abi in arm64-v8a armeabi-v7a; do
+            grep -q "native-code:.*'$abi'" badging.txt || { echo "::error::APK has no $abi code"; exit 1; }
+          done
+          echo "APK has its launcher activity, the app assembly, its Application class and both ARM ABIs."
 
       - uses: actions/upload-artifact@v4
         with:
@@ -272,8 +280,13 @@ jobs:
         with:
           path: artifacts
 
-      - name: List artifacts
-        run: find artifacts -type f
+      - name: Check all four platforms built
+        run: |
+          find artifacts -type f
+          for f in YouTubeDownloader-windows-x64.exe YouTubeDownloader-linux-x64 \
+                   YouTubeDownloader-android.apk YouTubeDownloader-ios.ipa; do
+            [ -n "$(find artifacts -type f -name "$f")" ] || { echo "::error::$f was not built"; exit 1; }
+          done
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

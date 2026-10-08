@@ -14,11 +14,13 @@ public partial class App : Avalonia.Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Android can create more than one activity over the app's life, so Avalonia 12
-        // asks for a way to make the view rather than a single view.
+        // Avalonia 12 asks each new activity for its view. Android recreates the activity for
+        // changes the manifest doesn't handle, so hand back the same view every time: a new
+        // one would show an idle form while the old one's download carried on unseen.
         if (ApplicationLifetime is IActivityApplicationLifetime activities)
         {
-            activities.MainViewFactory = () => new MainView();
+            MainView? view = null;
+            activities.MainViewFactory = () => view ??= new MainView();
         }
 
         base.OnFrameworkInitializationCompleted();
