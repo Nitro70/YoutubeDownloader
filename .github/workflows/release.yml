@@ -175,6 +175,19 @@ jobs:
           fi
           ls -lh YouTubeDownloader-ios.ipa
 
+      # 4.0.0-beta.1 and beta.2 built fine but had no libSkiaSharp and died at launch.
+      - name: Verify IPA
+        run: |
+          set -e
+          rm -rf ipa-check && mkdir ipa-check && unzip -q YouTubeDownloader-ios.ipa -d ipa-check
+          APP=$(ls -d ipa-check/Payload/*.app)
+          for fw in libSkiaSharp libHarfBuzzSharp; do
+            [ -f "$APP/Frameworks/$fw.framework/$fw" ] || { echo "::error::IPA has no $fw.framework"; exit 1; }
+          done
+          grep -aq "@rpath/libSkiaSharp.framework/libSkiaSharp" "$APP/SkiaSharp.dll" \
+            || { echo "::error::SkiaSharp.dll is not the iOS build"; exit 1; }
+          echo "IPA has the Skia and HarfBuzz frameworks and the iOS SkiaSharp."
+
       - uses: actions/upload-artifact@v4
         with:
           name: ios
