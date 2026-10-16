@@ -50,9 +50,10 @@ Every app makes that link for you: the **▶ Copy player link** button (desktop:
 
 - **It remembers where you were.** Open the same video again later and it carries on from the second you left. This is saved in your browser only. A `t=` in the link wins.
 - **It follows re-uploads.** Every minute the page checks that the video still exists. If it was deleted or made private, it looks on the same channel for a video with the same title and length and switches to it at the same second, fading one into the other.
+- **Just the picture.** YouTube's title, channel, logo, controls, captions and end screen are hidden, and the page's own link bar fades away while the video plays. Click or tap to pause, double-click for full screen; on a keyboard, space pauses, the arrow keys skip 5 seconds, `f` is full screen and `m` mutes.
 - **Nothing to install, nothing downloaded.** It all runs in the browser, and the video plays through YouTube's own embedded player.
 
-Limits: a video whose uploader turned off embedding shows a "Watch on YouTube" link instead. Following a re-upload needs the same channel, the same title and the same length (within 3 seconds). Browsers block sound on a page you haven't touched yet, so a player link opens paused and one tap starts it. A plain `youtube.com/embed/...` link no longer plays when typed into the address bar (YouTube answers "Error 153"), which is why the page exists.
+Limits: a video whose uploader turned off embedding shows a "Watch on YouTube" link instead. Following a re-upload needs the same channel, the same title and the same length (within 3 seconds). Browsers block sound on a page you haven't touched yet, so a player link opens paused and one tap starts it. For a few seconds after you start or skip, YouTube still shows a small pause symbol in the middle of the picture; it is drawn inside the video, so a page can't hide it. A plain `youtube.com/embed/...` link no longer plays when typed into the address bar (YouTube answers "Error 153"), which is why the page exists.
 
 Looking for re-uploads goes through a small relay (`relay/`, a Cloudflare Worker), because browsers can't read YouTube's search answers from another site. It needs no key and only answers the player page.
 

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   parseVideoId, parseStart, parseTime, parseDuration, titleSimilarity, channelHandle,
   pickReplacement, resumeTime, isGoneStatus, searchQuery, positionToKeep, switchMode,
+  videoBox, aspectFrom,
 } from './logic.js';
 
 const relay = JSON.parse(readFileSync(new URL('./test-fixtures/relay-me-at-the-zoo.json', import.meta.url)));
@@ -104,4 +105,18 @@ test('switchMode: crossfade while playing, play on if the viewer was watching, e
   assert.equal(switchMode(0, true), 'play');
   assert.equal(switchMode(2, false), 'cue');        // paused by the viewer
   assert.equal(switchMode(5, false), 'cue');        // opened from a link, not started yet
+});
+
+test('videoBox fits the video and crops the bars off the YouTube frame', () => {
+  assert.deepEqual(videoBox(960, 521, 16 / 9), { left: 17, top: 0, width: 926, height: 521, crop: 83 });
+  assert.deepEqual(videoBox(375, 812, 16 / 9), { left: 0, top: 301, width: 375, height: 211, crop: 64 });
+  assert.deepEqual(videoBox(1920, 1080, 4 / 3), { left: 240, top: 0, width: 1440, height: 1080, crop: 173 });
+  assert.deepEqual(videoBox(390, 844, 9 / 16), { left: 0, top: 75, width: 390, height: 693, crop: 111 });
+});
+
+test('aspectFrom reads oEmbed sizes, 16:9 otherwise', () => {
+  assert.equal(aspectFrom(200, 150), 4 / 3);
+  assert.equal(aspectFrom(200, 113), 200 / 113);
+  assert.equal(aspectFrom(undefined, 5), 16 / 9);
+  assert.equal(aspectFrom(0, 0), 16 / 9);
 });

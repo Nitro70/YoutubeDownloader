@@ -9,15 +9,18 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <form id="bar" autocomplete="off">
-    <input id="link" type="text" inputmode="url" placeholder="Paste a YouTube link" aria-label="YouTube link">
-    <button type="submit">Play</button>
-  </form>
-  <p id="status" role="status"></p>
   <main id="stage">
-    <p id="intro">Paste a YouTube link above to watch just the video.<br>
+    <p id="intro">Paste a YouTube link to watch just the video.<br>
       Your place is remembered, and if the video is re-uploaded the page follows it.</p>
+    <div id="shield" hidden></div>
   </main>
+  <header id="top">
+    <form id="bar" autocomplete="off">
+      <input id="link" type="text" inputmode="url" placeholder="Paste a YouTube link" aria-label="YouTube link">
+      <button type="submit">Play</button>
+    </form>
+    <p id="status" role="status"></p>
+  </header>
   <script type="module" src="app.js"></script>
 </body>
 </html>

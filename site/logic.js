@@ -127,3 +127,25 @@ export function switchMode(state, watching) {
   if (state === 1 || state === 3) return 'crossfade';
   return watching ? 'play' : 'cue';
 }
+
+/**
+ * Where a video of `aspect` (width / height) sits in a stage, as large as fits, centred. `crop` is
+ * how far YouTube's frame reaches past the box above and below: its title bar and logo sit at the
+ * frame's edges, so they fall outside the box and are cut off.
+ */
+export function videoBox(stageW, stageH, aspect) {
+  const width = Math.min(stageW, stageH * aspect);
+  const height = width / aspect;
+  return {
+    left: Math.round((stageW - width) / 2),
+    top: Math.round((stageH - height) / 2),
+    width: Math.round(width),
+    height: Math.round(height),
+    crop: Math.max(64, Math.round(height * 0.16)),
+  };
+}
+
+/** The video's shape from oEmbed's width and height; 16:9 when they are missing. */
+export function aspectFrom(width, height) {
+  return width > 0 && height > 0 ? width / height : 16 / 9;
+}
