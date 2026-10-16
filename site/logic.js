@@ -108,3 +108,22 @@ export function isGoneStatus(status) {
 export function searchQuery(title) {
   return String(title ?? '').trim().slice(0, 200);
 }
+
+/**
+ * The second to remember for a player in `state` (YT.PlayerState): its own time once it has
+ * loaded the video, else the saved one. A removed video never loads, and reports 0.
+ */
+export function positionToKeep(state, liveTime, savedTime) {
+  const loaded = state === 1 || state === 2 || state === 3 || state === 5;
+  const t = loaded && Number.isFinite(liveTime) ? liveTime : savedTime;
+  return Number.isFinite(t) && t >= 0 ? t : null;
+}
+
+/**
+ * How to move to a re-upload: 'crossfade' while the old player plays (or buffers), 'play' when
+ * the viewer was watching but the old player has stopped (removed or errored), else 'cue' it.
+ */
+export function switchMode(state, watching) {
+  if (state === 1 || state === 3) return 'crossfade';
+  return watching ? 'play' : 'cue';
+}

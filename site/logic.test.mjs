@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseVideoId, parseStart, parseTime, parseDuration, titleSimilarity, channelHandle,
-  pickReplacement, resumeTime, isGoneStatus, searchQuery,
+  pickReplacement, resumeTime, isGoneStatus, searchQuery, positionToKeep, switchMode,
 } from './logic.js';
 
 const relay = JSON.parse(readFileSync(new URL('./test-fixtures/relay-me-at-the-zoo.json', import.meta.url)));
@@ -85,4 +85,23 @@ test('only definite answers count as gone', () => {
 test('searchQuery keeps the relay request under 200 characters', () => {
   assert.equal(searchQuery('x'.repeat(500)).length, 200);
   assert.equal(searchQuery('  Me at the zoo  '), 'Me at the zoo');
+});
+
+test('positionToKeep: a player that never loaded keeps the saved second', () => {
+  assert.equal(positionToKeep(-1, 0, 300), 300);   // removed video: unstarted, reports 0
+  assert.equal(positionToKeep(-1, 0, undefined), null);
+  assert.equal(positionToKeep(1, 42.5, 300), 42.5); // playing
+  assert.equal(positionToKeep(2, 7, null), 7);      // paused
+  assert.equal(positionToKeep(3, 8, 1), 8);         // buffering
+  assert.equal(positionToKeep(5, 10, 300), 10);     // cued at its start second
+  assert.equal(positionToKeep(1, NaN, 5), 5);
+});
+
+test('switchMode: crossfade while playing, play on if the viewer was watching, else cue', () => {
+  assert.equal(switchMode(1, true), 'crossfade');
+  assert.equal(switchMode(3, true), 'crossfade');   // buffering counts as playing
+  assert.equal(switchMode(-1, true), 'play');       // errored or never loaded while watching
+  assert.equal(switchMode(0, true), 'play');
+  assert.equal(switchMode(2, false), 'cue');        // paused by the viewer
+  assert.equal(switchMode(5, false), 'cue');        // opened from a link, not started yet
 });
