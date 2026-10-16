@@ -1,6 +1,6 @@
 import {
   parseVideoId, parseStart, pickReplacement, resumeTime, isGoneStatus, searchQuery,
-  positionToKeep, switchMode, videoBox, aspectFrom,
+  positionToKeep, switchMode, videoBox, aspectFrom, looksLikeAd,
 } from './logic.js';
 import { RELAY_URL } from './config.js';
 
@@ -12,6 +12,8 @@ const PARK_AHEAD_S = 2;
 const IDLE_MS = 2500;
 const STATUS_MS = 5000;
 const DOUBLE_CLICK_MS = 250;
+const AD_CHECK_MS = 400;
+const AD_NOTE = "An ad is playing in YouTube's player. Your video starts after it.";
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
 const REPLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>';
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
@@ -353,7 +355,8 @@ function formatTime(s) {
 // ---------- our own controls: nothing of YouTube's is ever shown ----------
 // The shield covers the video once it has played, so every click and tap comes here.
 function syncShield() {
-  shield.hidden = !current?.el?.classList.contains('started');
+  const el = current?.el;
+  shield.hidden = !el?.classList.contains('started') || el.classList.contains('ad');
 }
 
 function togglePlay() {
@@ -424,6 +427,50 @@ document.addEventListener('keydown', e => {
 });
 addEventListener('resize', () => { for (const el of stage.querySelectorAll('.player')) layout(el); });
 
+// ---------- ads ----------
+// YouTube's player can play ads before or during a video, and a page can't turn them off. Our
+// still and shield would hide an ad (you'd only hear it) and block its Skip button, so while one
+// plays the layer shows YouTube's whole player; when our video's time moves again, it goes back.
+let adWatch = { owner: null, lastTime: null, stillSince: 0 };
+function checkForAd() {
+  const mine = current;
+  const p = mine?.player;
+  if (!p?.getPlayerState || !mine.el) return;
+  if (adWatch.owner !== mine) adWatch = { owner: mine, lastTime: null, stillSince: Date.now() };
+  let state, time, videoId;
+  try {
+    state = p.getPlayerState();
+    time = p.getCurrentTime();
+    videoId = p.getVideoData?.()?.video_id;
+  } catch { return; }
+  const moved = state === 1 && adWatch.lastTime !== null && Math.abs(time - adWatch.lastTime) > 0.15;
+  adWatch.lastTime = time;
+  if (moved || !(state === 1 || state === 3 || state === -1)) adWatch.stillSince = Date.now();
+  const ours = !videoId || videoId === mine.id;
+  if (mine.el.classList.contains('ad')) {
+    if (moved && ours) setAdMode(mine.el, false); // only our video moving ends it, not a flicker of pause
+  } else if (looksLikeAd({ state, videoId, expectedId: mine.id, stillMs: Date.now() - adWatch.stillSince, watching: mine.watching })) {
+    setAdMode(mine.el, true);
+  }
+}
+
+function setAdMode(el, on) {
+  if (el.classList.contains('ad') === on) return;
+  el.classList.toggle('ad', on);
+  syncShield();
+  if (on) status(AD_NOTE);
+  else if ($('status').textContent === AD_NOTE) status('');
+}
+
+// A first tap on a cold link goes into YouTube's frame, which takes the focus from the page:
+// that is the viewer pressing play.
+addEventListener('blur', () => setTimeout(() => {
+  const f = document.activeElement;
+  if (f?.tagName === 'IFRAME' && current?.el?.contains(f)) current.watching = true;
+}, 0));
+
+setInterval(checkForAd, AD_CHECK_MS);
+
 // ---------- page wiring ----------
 $('bar').addEventListener('submit', e => {
   e.preventDefault();
@@ -455,6 +502,9 @@ if (local) {
       time: current?.player?.getCurrentTime?.() ?? null,
       playerState: current?.player?.getPlayerState?.() ?? null,
       players: stage.querySelectorAll('.player').length,
+      ad: !!current?.el?.classList.contains('ad'),
+      watching: !!current?.watching,
     }),
+    player: () => current?.player,
   };
 }

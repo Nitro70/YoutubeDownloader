@@ -25,6 +25,9 @@ body.idle { cursor: none; }
   background: rgba(0, 0, 0, .55); border: 2px solid rgba(255, 255, 255, .85); }
 .glyph svg { width: 36px; height: 36px; fill: #fff; }
 #shield { position: absolute; inset: 0; z-index: 2; }
+/* An ad is playing: show YouTube's whole player, uncropped and clickable, so it can be seen and skipped. */
+.player.ad iframe { top: 0; height: 100%; pointer-events: auto; }
+.player.ad .cover { display: none; }
 
 #top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; transition: opacity .35s;
   padding: max(10px, env(safe-area-inset-top)) 12px 22px;

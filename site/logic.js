@@ -149,3 +149,14 @@ export function videoBox(stageW, stageH, aspect) {
 export function aspectFrom(width, height) {
   return width > 0 && height > 0 ? width / height : 16 / 9;
 }
+
+/**
+ * Whether YouTube's player is showing an ad rather than our video. During an ad our video's time
+ * stands still while the player runs (or flips between states), and the player may report the ad's
+ * own id. A pause, the end, or a player waiting for its first tap is never an ad.
+ */
+export function looksLikeAd({ state, videoId, expectedId, stillMs, watching }) {
+  if (videoId && expectedId && videoId !== expectedId) return true;
+  if (state === 0 || state === 2 || state === 5) return false;
+  return Boolean(watching) && stillMs > 1500;
+}

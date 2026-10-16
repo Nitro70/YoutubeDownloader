@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   parseVideoId, parseStart, parseTime, parseDuration, titleSimilarity, channelHandle,
   pickReplacement, resumeTime, isGoneStatus, searchQuery, positionToKeep, switchMode,
-  videoBox, aspectFrom,
+  videoBox, aspectFrom, looksLikeAd,
 } from './logic.js';
 
 const relay = JSON.parse(readFileSync(new URL('./test-fixtures/relay-me-at-the-zoo.json', import.meta.url)));
@@ -119,4 +119,18 @@ test('aspectFrom reads oEmbed sizes, 16:9 otherwise', () => {
   assert.equal(aspectFrom(200, 113), 200 / 113);
   assert.equal(aspectFrom(undefined, 5), 16 / 9);
   assert.equal(aspectFrom(0, 0), 16 / 9);
+});
+
+test('looksLikeAd: another video, or running a while without our video moving', () => {
+  const base = { state: 1, videoId: 'jNQXAC9IVRw', expectedId: 'jNQXAC9IVRw', stillMs: 0, watching: true };
+  assert.equal(looksLikeAd(base), false);                                   // our video, moving
+  assert.equal(looksLikeAd({ ...base, videoId: 'zzzzzzzzzzz' }), true);     // the player reports another video
+  assert.equal(looksLikeAd({ ...base, stillMs: 2000 }), true);              // "playing" but our time stands still
+  assert.equal(looksLikeAd({ ...base, state: 3, stillMs: 2000 }), true);    // buffering-like flapping
+  assert.equal(looksLikeAd({ ...base, state: -1, stillMs: 2000 }), true);   // started by a tap, nothing of ours yet
+  assert.equal(looksLikeAd({ ...base, stillMs: 1000 }), false);             // a short stall is not an ad
+  assert.equal(looksLikeAd({ ...base, state: 2, stillMs: 9000 }), false);   // paused by the viewer
+  assert.equal(looksLikeAd({ ...base, state: 5, stillMs: 9000 }), false);   // waiting for a first tap
+  assert.equal(looksLikeAd({ ...base, state: 0, stillMs: 9000 }), false);   // ended
+  assert.equal(looksLikeAd({ ...base, watching: false, stillMs: 9000 }), false); // nobody pressed play
 });
