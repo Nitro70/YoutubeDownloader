@@ -287,6 +287,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void CopyPlayerLinkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (!PlayerLink.TryCreate(UrlTextBox.Text, out string link) || Clipboard is null)
+        {
+            Log("Copy player link needs a link to a single YouTube video in the box.");
+            return;
+        }
+        try
+        {
+            await Clipboard.SetTextAsync(link);
+            Log($"Copied player link: {link}");
+            CopyPlayerLinkButton.Content = "✓ Copied";
+            await Task.Delay(1500);
+            CopyPlayerLinkButton.Content = "▶ Copy player link";
+        }
+        catch (Exception ex)
+        {
+            Log($"Copy failed: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// The link in the box, or, when it holds search words, the first search result.
     /// Null when there is nothing to download.

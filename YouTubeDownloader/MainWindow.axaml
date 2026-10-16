@@ -110,12 +110,20 @@
                                     <TextBlock Name="ChannelText" Classes="label" Margin="0,5,0,0"/>
                                     <TextBlock Name="DurationText" Classes="label" Margin="0,3,0,0"/>
                                 </StackPanel>
-                                <Button Name="CopyLinkButton" Grid.Column="2"
-                                        Content="🔗 Copy link" Classes="yt"
-                                        VerticalAlignment="Center"
-                                        Padding="12,6" FontSize="12"
-                                        Margin="10,0,0,0"
-                                        Click="CopyLinkButton_Click"/>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center"
+                                            Spacing="6" Margin="10,0,0,0">
+                                    <Button Name="CopyLinkButton"
+                                            Content="🔗 Copy link" Classes="yt"
+                                            HorizontalAlignment="Stretch"
+                                            Padding="12,6" FontSize="12"
+                                            Click="CopyLinkButton_Click"/>
+                                    <Button Name="CopyPlayerLinkButton"
+                                            Content="▶ Copy player link" Classes="yt"
+                                            HorizontalAlignment="Stretch"
+                                            Padding="12,6" FontSize="12"
+                                            ToolTip.Tip="A link that plays just the video in any browser"
+                                            Click="CopyPlayerLinkButton_Click"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </StackPanel>
