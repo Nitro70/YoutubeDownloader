@@ -41,6 +41,8 @@ internal static class CliRunner
             Console.Error.WriteLine("Run with --help for usage.");
             return 2;
         }
+        if (o.PlayerLink)
+            return PrintPlayerLink(o);
         if (o.Search)
         {
             if (o.Query == null)
@@ -128,6 +130,46 @@ internal static class CliRunner
 
         if (TryCopyToClipboard(results[0].Url))
             Console.Error.WriteLine("(first link copied to the clipboard)");
+        return 0;
+    }
+
+    // Prints the player page link for the link given, or for the first search result.
+    private static int PrintPlayerLink(CliOptions o)
+    {
+        string? source = o.Url;
+        if (source == null)
+        {
+            if (o.Query == null)
+            {
+                Console.Error.WriteLine("Error: --player-link needs a link or search words.");
+                return 2;
+            }
+            try
+            {
+                var results = new YouTubeService().SearchAsync(o.Query, 1).GetAwaiter().GetResult();
+                if (results.Count == 0)
+                {
+                    Console.Error.WriteLine($"No video found for \"{o.Query}\".");
+                    return 1;
+                }
+                Console.Error.WriteLine($"Top result: {results[0].Title} ({results[0].Author})");
+                source = results[0].Url;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Search failed: {ex.Message}");
+                return 1;
+            }
+        }
+
+        if (!PlayerLink.TryCreate(source, out string link))
+        {
+            Console.Error.WriteLine($"Error: not a link to a single YouTube video: {source}");
+            return 2;
+        }
+        Console.WriteLine(link);
+        if (TryCopyToClipboard(link))
+            Console.Error.WriteLine("(copied to the clipboard)");
         return 0;
     }
 
@@ -348,6 +390,8 @@ internal static class CliRunner
                                      the search words (Windows: also copied to
                                      the clipboard)
               -r, --results <N>      With --search, list the top N results (1-50)
+              -p, --player-link      Print a link that plays just the video in any
+                                     browser (Windows: also copied to the clipboard)
               -h, --help, /?         Show this help and exit
               -v, --version          Show the version and exit
 
@@ -383,6 +427,7 @@ internal static class CliRunner
               {exe} -c https://www.youtube.com/@SomeChannel
               {exe} -s never gonna give you up
               {exe} -s -r 5 lofi hip hop
+              {exe} -p https://youtu.be/VIDEO
               {exe} --mp3 never gonna give you up
             """);
     }
@@ -400,6 +445,7 @@ internal static class CliRunner
         public bool ShowHelp;
         public bool ShowVersion;
         public bool Search;
+        public bool PlayerLink;
         public int Results = 1;
 
         /// <summary>Joined positional words when they aren't a single link.</summary>
@@ -438,6 +484,8 @@ internal static class CliRunner
                         o.Channel = true; break;
                     case "-s": case "--search":
                         o.Search = true; break;
+                    case "-p": case "--player-link":
+                        o.PlayerLink = true; break;
                     case "--":
                         onlyWords = true; break;
 
