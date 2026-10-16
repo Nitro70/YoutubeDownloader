@@ -88,6 +88,10 @@
                                        TextWrapping="Wrap"/>
                             <TextBlock Name="ChannelText" Classes="label"/>
                             <TextBlock Name="DurationText" Classes="label"/>
+                            <Button Name="CopyPlayerLinkButton"
+                                    Content="▶  Copy player link" Classes="ghost"
+                                    HorizontalAlignment="Stretch"
+                                    Click="CopyPlayerLinkButton_Click"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

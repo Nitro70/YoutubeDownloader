@@ -90,6 +90,23 @@ public partial class MainView : UserControl
         }
     }
 
+    private async void CopyPlayerLinkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        var clip = Top?.Clipboard;
+        if (clip is null || !PlayerLink.TryCreate(UrlTextBox.Text, out string link)) return;
+        try
+        {
+            await clip.SetTextAsync(link);
+            CopyPlayerLinkButton.Content = "✓  Copied";
+            await Task.Delay(1500);
+            CopyPlayerLinkButton.Content = "▶  Copy player link";
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Couldn't copy: {ErrorText.Describe(ex)}");
+        }
+    }
+
     private async void FetchButton_Click(object? sender, RoutedEventArgs e)
     {
         string text = UrlTextBox.Text?.Trim() ?? string.Empty;
