@@ -8,7 +8,8 @@ A cross-platform video downloader. On **Windows and Linux** it's a desktop GUI (
 
 - YouTube-themed dark UI built with [Avalonia](https://avaloniaui.net/)
 - **Search YouTube by typing words** in the link box: pick from the top 10 results, or hit Download to grab the first one
-- Paste a URL and fetch video info (title, channel, duration, thumbnail), with a **Copy link** button
+- Paste a URL and fetch video info (title, channel, duration, thumbnail), with **Copy link** and **Copy player link** buttons
+- **[Player page](#player-page):** a web page that plays just the video in any browser, remembers your place and follows re-uploads
 - Download as **MP4** video with quality selection (Best, 1080p, 720p, 480p, 360p)
 - Download as **MP3** audio-only extraction
 - Download entire channels/playlists
@@ -37,6 +38,24 @@ Type words instead of a link and the box turns into a search:
 
 Results are plain videos only: channels, playlists, shelves and ads are skipped.
 
+## Player page
+
+**[nitro70.github.io/YoutubeDownloader](https://nitro70.github.io/YoutubeDownloader/)** plays a YouTube video on its own, filling the window, with nothing else from YouTube around it. Paste a link and press Play, or open a player link directly:
+
+```
+https://nitro70.github.io/YoutubeDownloader/?v=VIDEO_ID&t=SECONDS
+```
+
+Every app makes that link for you: the **▶ Copy player link** button (desktop: next to Copy link; phones: under the video info) or `-p` on the command line. A start time in the YouTube link (`t=1m30s`, `start=90`) is kept.
+
+- **It remembers where you were.** Open the same video again later and it carries on from the second you left. This is saved in your browser only. A `t=` in the link wins.
+- **It follows re-uploads.** Every minute the page checks that the video still exists. If it was deleted or made private, it looks on the same channel for a video with the same title and length and switches to it at the same second, fading one into the other.
+- **Nothing to install, nothing downloaded.** It all runs in the browser, and the video plays through YouTube's own embedded player.
+
+Limits: a video whose uploader turned off embedding shows a "Watch on YouTube" link instead. Following a re-upload needs the same channel, the same title and the same length (within 3 seconds). Browsers block sound on a page you haven't touched yet, so a player link opens paused and one tap starts it. A plain `youtube.com/embed/...` link no longer plays when typed into the address bar (YouTube answers "Error 153"), which is why the page exists.
+
+Looking for re-uploads goes through a small relay (`relay/`, a Cloudflare Worker), because browsers can't read YouTube's search answers from another site. It needs no key and only answers the player page.
+
 ## Command line (Windows & Linux)
 
 The desktop binary is a hybrid: run it with **no arguments** to open the GUI, or pass **any argument** to use it from the terminal. The Windows build attaches to the calling console automatically.
@@ -51,6 +70,8 @@ ACTIONS
   -s, --search          Print the link of the first video found for the
                         search words (Windows: also copied to the clipboard)
   -r, --results <N>     With --search, list the top N results (1-50)
+  -p, --player-link     Print a link that plays just the video in any
+                        browser (Windows: also copied to the clipboard)
   -h, --help, /?        Show help and exit
   -v, --version         Show the version and exit
 
@@ -92,6 +113,9 @@ YouTubeDownloader.exe -s never gonna give you up
 # List the top 5 results with titles
 YouTubeDownloader.exe -s -r 5 lofi hip hop
 
+# A link that plays just the video in a browser (the player page)
+YouTubeDownloader.exe -p https://youtu.be/VIDEO
+
 # Search and download the first result as MP3, no link needed
 YouTubeDownloader.exe --mp3 never gonna give you up
 ```
@@ -131,6 +155,7 @@ Phones can't run yt-dlp or ffmpeg, so the Android and iOS apps extract YouTube s
 - ✅ **Video** downloads as MP4, up to **1080p**. YouTube serves video and audio as separate streams; the app downloads an H.264 video stream and an AAC audio stream and merges them into one MP4 on the phone, with its own small MP4 muxer (no ffmpeg, no re-encoding). H.264 is used because it plays in iPhone Photos and Android galleries, unlike YouTube's VP9/AV1 streams.
 - ✅ **Audio-only M4A** (AAC) downloads.
 - ✅ **iPhone: videos saved straight to Photos** (can be switched off).
+- ✅ **Copy player link** under the video info, for the [player page](#player-page).
 - ❌ No 1440p/4K on the phone apps: YouTube only offers those as VP9/AV1, not H.264.
 - ❌ No channel/playlist bulk download on the phone apps.
 
@@ -206,6 +231,8 @@ Push a `v*` tag (or run the workflow by hand from the Actions tab) and the [GitH
 | `YouTubeDownloader.Core` | `net10.0` | Native C# YouTube search, extraction and MP4 merging (shared) |
 | `YouTubeDownloader.iOS` | `net10.0-ios26.0` (Avalonia 12) | iOS app head, builds the IPA |
 | `YouTubeDownloader.Android` | `net10.0-android` (Avalonia 12) | Android app head, builds the APK |
+
+Outside the .NET projects: `site/` is the [player page](#player-page), published to GitHub Pages by [pages.yml](.github/workflows/pages.yml) (tests: `node --test "site/*.test.mjs"`); `relay/` is its search relay, a Cloudflare Worker deployed with `npx wrangler deploy` from that folder (tests: `node --test "relay/test/*.test.mjs"`); `tests/` holds the Core unit tests (`dotnet test tests/YouTubeDownloader.Core.Tests`).
 
 ## Cookies (Optional)
 
