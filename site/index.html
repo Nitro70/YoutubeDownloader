@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- YouTube refuses embeds that arrive without a Referer (Error 153). -->
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>YT Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <form id="bar" autocomplete="off">
+    <input id="link" type="text" inputmode="url" placeholder="Paste a YouTube link" aria-label="YouTube link">
+    <button type="submit">Play</button>
+  </form>
+  <p id="status" role="status"></p>
+  <main id="stage">
+    <p id="intro">Paste a YouTube link above to watch just the video.<br>
+      Your place is remembered, and if the video is re-uploaded the page follows it.</p>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
