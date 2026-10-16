@@ -76,6 +76,9 @@ jobs:
           key: nuget-${{ runner.os }}-${{ github.job }}-${{ hashFiles('**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-${{ github.job }}-
 
+      - name: Core tests
+        run: dotnet test tests/YouTubeDownloader.Core.Tests -c Release
+
       - name: Fetch Linux tools (yt-dlp + static ffmpeg)
         run: |
           set -e
