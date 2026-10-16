@@ -78,9 +78,11 @@ Plain HTML, CSS and JavaScript modules, no build step, published by a Pages work
   - If the old player is not playing (paused, ended, errored): load the new video at the saved
     time, keep it paused if the old was paused, delete the old entry, update the address.
   - Status line: "Video was replaced, continuing with the new upload."
-- Test hook, only on `localhost`/`127.0.0.1`: `?debugReplaceWith=ID&debugAfter=SECONDS` marks the
-  video gone after that many seconds and uses ID as the found re-upload (skipping the relay), so
-  the switch can be tested without a real deletion.
+- Test hooks, only on `localhost`/`127.0.0.1`: `?debugGoneAfter=SECONDS` treats the video as gone
+  after that many seconds (searching the real relay, with the current video allowed to count as
+  its own re-upload); adding `debugReplaceWith=ID` skips the relay and switches to ID;
+  `debugRelay=URL` points at another relay (to test a relay failure). So the switch can be
+  tested without a real deletion.
 
 ### 3. The search relay (`relay/`, Cloudflare Worker "ytd-relay")
 
